@@ -26,14 +26,23 @@ THE SOFTWARE.
 -----------------------------------------------------------------------------
 */
 #include "OgreStableHeaders.h"
-
-#include "OgreMeshSerializer.h"
-#include "OgreMesh.h"
-#include "OgreException.h"
-#include "OgreLogManager.h"
-
+#include "OgreMeshSerializerImpl.h"
 
 namespace Ogre {
+
+    class _OgrePrivate MeshVersionData : public SerializerAlloc
+    {
+    public:
+        MeshVersion version;
+        String versionString;
+        MeshSerializerImpl* impl;
+
+        MeshVersionData(MeshVersion _ver, const String& _string, MeshSerializerImpl* _impl)
+        : version(_ver), versionString(_string), impl(_impl) {}
+
+        ~MeshVersionData() { OGRE_DELETE impl; }
+
+    };
 
     const unsigned short HEADER_CHUNK_ID = 0x1000;
     //---------------------------------------------------------------------
@@ -190,9 +199,9 @@ namespace Ogre {
         // Warn on old version of mesh
         if (ver != mVersionData[0]->versionString)
         {
-            LogManager::getSingleton().logMessage("WARNING: " + pDest->getName() + 
+            LogManager::getSingleton().logWarning( pDest->getName() +
                 " is an older format (" + ver + "); you should upgrade it as soon as possible" +
-                " using the OgreMeshUpgrade tool.", LML_CRITICAL);
+                " using the OgreMeshUpgrade tool.");
         }
 
         if(mListener)

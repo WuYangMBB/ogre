@@ -26,11 +26,7 @@ THE SOFTWARE.
 -----------------------------------------------------------------------------
 */
 
-#include "OgreShaderHLSLProgramWriter.h"
-#include "OgreGpuProgramManager.h"
-#include "OgreShaderProgram.h"
-#include "OgreShaderGenerator.h"
-#include "OgreStringConverter.h"
+#include "OgreShaderPrecompiledHeaders.h"
 
 namespace Ogre {
 namespace RTShader {
@@ -151,9 +147,6 @@ void HLSLProgramWriter::writeSourceCode(std::ostream& os, Program* program)
             writeLocalParameter(os, *itParam);          
             os << ";" << std::endl;                     
         }
-
-        // Sort and write function atoms.
-        curFunction->sortAtomInstances();
 
         const FunctionAtomInstanceList& atomInstances = curFunction->getAtomInstances();
         FunctionAtomInstanceConstIterator itAtom;

@@ -28,7 +28,6 @@ THE SOFTWARE.
 #include "OgreD3D11RenderWindow.h"
 #include "OgreException.h"
 #include "OgreD3D11RenderSystem.h"
-#include "OgreWindowEventUtilities.h"
 #include "OgreD3D11Driver.h"
 #include "OgreRoot.h"
 #include "OgreD3D11DepthBuffer.h"
@@ -42,6 +41,11 @@ THE SOFTWARE.
 #include <iomanip>
 #if OGRE_PLATFORM == OGRE_PLATFORM_WINRT && defined(_WIN32_WINNT_WINBLUE) && _WIN32_WINNT >= _WIN32_WINNT_WINBLUE
 #include <dxgi1_3.h> // for IDXGISwapChain2::SetMatrixTransform used in D3D11RenderWindowSwapChainPanel
+#endif
+
+#if defined(_WIN32_WINNT_WIN8) && _WIN32_WINNT >= _WIN32_WINNT_WIN8
+#include <Windows.h>
+#include <VersionHelpers.h>
 #endif
 
 #define OGRE_D3D11_WIN_CLASS_NAME "OgreD3D11Wnd"
@@ -278,47 +282,36 @@ namespace Ogre
 
         if( name == "D3DDEVICE" )
         {
-            ID3D11DeviceN  **device = (ID3D11DeviceN **)pData;
-            *device = mDevice.get();
-            return;
+            *(ID3D11DeviceN **)pData = mDevice.get();
         }
         else if( name == "isTexture" )
         {
-            bool *b = static_cast< bool * >( pData );
-            *b = false;
-            return;
+            *(bool*)pData = false;
         }
         else if( name == "ID3D11RenderTargetView" )
         {
-            *static_cast<ID3D11RenderTargetView**>(pData) = mRenderTargetView.Get();
-            return;
+            *(ID3D11RenderTargetView**)pData = mRenderTargetView.Get();
         }
         else if( name == "ID3D11Texture2D" )
         {
-            ID3D11Texture2D **pBackBuffer = (ID3D11Texture2D**)pData;
-            *pBackBuffer = mpBackBuffer.Get();
-            return;
+            *(ID3D11Texture2D**)pData = mpBackBuffer.Get();
         }
         else if( name == "numberOfViews" )
         {
-            unsigned int* n = static_cast<unsigned int*>(pData);
-            *n = 1;
-            return;
+            *(unsigned*)pData = 1;
         }
         else if( name == "DDBACKBUFFER" )
         {
-            ID3D11Texture2D **ppBackBuffer = (ID3D11Texture2D**) pData;
-            ppBackBuffer[0] = NULL;
-            return;
+            *(ID3D11Texture2D**)pData = NULL;
         }
-
-        RenderWindow::getCustomAttribute(name, pData);
+        else
+            RenderWindow::getCustomAttribute(name, pData);
     }
     //---------------------------------------------------------------------
     void D3D11RenderWindowBase::copyContentsToMemory(const Box& src, const PixelBox &dst, FrameBuffer buffer)
     {
         if(src.right > mWidth || src.bottom > mHeight || src.front != 0 || src.back != 1
-        || dst.getWidth() != src.getWidth() || dst.getHeight() != dst.getHeight() || dst.getDepth() != 1)
+        || dst.getWidth() != src.getWidth() || dst.getHeight() != src.getHeight() || dst.getDepth() != 1)
         {
             OGRE_EXCEPT(Exception::ERR_INVALIDPARAMS, "Invalid box.", "D3D11RenderWindowBase::copyContentsToMemory");
         }
@@ -407,7 +400,7 @@ namespace Ogre
         : D3D11RenderWindowBase(device)
     {
         ZeroMemory( &mSwapChainDesc, sizeof(DXGI_SWAP_CHAIN_DESC_N) );
-        mUseFlipSequentialMode = false;
+        mUseFlipMode = false;
         mVSync = false;
         mVSyncInterval = 1;
 
@@ -462,9 +455,9 @@ namespace Ogre
         mpBackBufferNoMSAA.Reset();
 
         HRESULT hr = S_OK;
-        if(mUseFlipSequentialMode && mFSAAType.Count > 1)
+        if(mUseFlipMode && mFSAAType.Count > 1)
         {
-            // Swapchain does not support FSAA in FlipSequentialMode, therefore create separate back buffer with FSAA
+            // Swapchain does not support FSAA in FlipMode, therefore create separate back buffer with FSAA
             // Swapchain(FSAA=0, SRGB=0) <-ResolveSubresource- Buffer(FSAA=4x, SRGB=0) <= RenderTargetView(FSAA=4x, SRGB=0)
             D3D11_TEXTURE2D_DESC desc = { 0 };
             desc.Width               = mWidth;
@@ -515,7 +508,7 @@ namespace Ogre
 
         _destroySizeDependedD3DResources();
 
-        if(mUseFlipSequentialMode)
+        if(mUseFlipMode)
         {
             // swapchain is not multisampled in flip sequential mode, so we reuse it
             D3D11RenderSystem* rsys = static_cast<D3D11RenderSystem*>(Root::getSingleton().getRenderSystem());
@@ -585,7 +578,7 @@ namespace Ogre
         if( !mDevice.isNull() )
         {
             // Step of resolving MSAA resource for swap chains in FlipSequentialMode should be done by application rather than by OS.
-            if(mUseFlipSequentialMode && mFSAAType.Count > 1)
+            if(mUseFlipMode && mFSAAType.Count > 1)
             {
                 ComPtr<ID3D11Texture2D> swapChainBackBuffer;
                 HRESULT hr = mpSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)swapChainBackBuffer.ReleaseAndGetAddressOf());
@@ -605,7 +598,7 @@ namespace Ogre
 			}
 
             // flip presentation model swap chains have another semantic for first parameter
-            UINT syncInterval = mUseFlipSequentialMode ? std::max(1U, mVSyncInterval) : (mVSync ? mVSyncInterval : 0);
+            UINT syncInterval = mUseFlipMode ? std::max(1U, mVSyncInterval) : (mVSync ? mVSyncInterval : 0);
             HRESULT hr = mpSwapChain->Present(syncInterval, 0);
             if( FAILED(hr) )
                 OGRE_EXCEPT_EX(Exception::ERR_RENDERINGAPI_ERROR, hr, "Error Presenting surfaces", "D3D11RenderWindowSwapChainBased::swapBuffers");
@@ -620,7 +613,7 @@ namespace Ogre
 	//---------------------------------------------------------------------
 	int D3D11RenderWindowSwapChainBased::getVBlankMissCount()
 	{
-		if (!(mIsFullScreen || (!mIsFullScreen && isVSyncEnabled() && mUseFlipSequentialMode == true && mFSAA == 0)))
+		if (!(mIsFullScreen || (!mIsFullScreen && isVSyncEnabled() && mUseFlipMode == true && mFSAA == 0)))
 		{
 			return -1;
 		}
@@ -663,14 +656,6 @@ namespace Ogre
 		mDesiredWidth = 0;
 		mDesiredHeight = 0;
 		mLastSwitchingFullscreenCounter = 0;
-    }
-    //---------------------------------------------------------------------
-    bool D3D11RenderWindowHwnd::IsWindows8OrGreater()
-    {
-        DWORD version = GetVersion();
-        DWORD major = (DWORD)(LOBYTE(LOWORD(version)));
-        DWORD minor = (DWORD)(HIBYTE(LOWORD(version)));
-        return (major > 6) || ((major == 6) && (minor >= 2));
     }
     //---------------------------------------------------------------------
     void D3D11RenderWindowHwnd::create(const String& name, unsigned int width, unsigned int height,
@@ -731,10 +716,10 @@ namespace Ogre
                 monitorIndex = StringConverter::parseInt(opt->second);
 
 #if defined(_WIN32_WINNT_WIN8) && _WIN32_WINNT >= _WIN32_WINNT_WIN8
-            // useFlipSequentialMode    [parseBool]
-            opt = miscParams->find("useFlipSequentialMode");
+            // useFlipMode    [parseBool]
+            opt = miscParams->find("useFlipMode");
             if(opt != miscParams->end())
-                mUseFlipSequentialMode = IsWindows8OrGreater() && StringConverter::parseBool(opt->second);
+                mUseFlipMode = IsWindows8OrGreater() && StringConverter::parseBool(opt->second);
 #endif
             // vsync    [parseBool]
             opt = miscParams->find("vsync");
@@ -856,14 +841,13 @@ namespace Ogre
 			static const TCHAR staticVar;
 			GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, &staticVar, &hInst);
 
-			WNDCLASS wc = { classStyle, WindowEventUtilities::_WndProc, 0, 0, hInst,
+			WNDCLASS wc = { classStyle, DefWindowProc, 0, 0, hInst,
 				LoadIcon(0, IDI_APPLICATION), LoadCursor(NULL, IDC_ARROW),
 				(HBRUSH)GetStockObject(BLACK_BRUSH), 0, OGRE_D3D11_WIN_CLASS_NAME };
 			RegisterClass(&wc);
 			mIsExternal = false;
 			mHWnd = CreateWindowEx(dwStyleEx, OGRE_D3D11_WIN_CLASS_NAME, title.c_str(), getWindowStyle(fullScreen),
 				mLeft, mTop, winWidth, winHeight, parentHWnd, 0, hInst, this);
-			WindowEventUtilities::_addRenderWindow(this);
 		}
 		else
 		{
@@ -902,7 +886,6 @@ namespace Ogre
 
         if (mHWnd && !mIsExternal)
         {
-            WindowEventUtilities::_removeRenderWindow(this);
             DestroyWindow(mHWnd);
         }
 
@@ -931,24 +914,27 @@ namespace Ogre
 		mSwapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 		mSwapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 
-		if(mUseFlipSequentialMode)
+#if defined(_WIN32_WINNT_WIN8) && _WIN32_WINNT >= _WIN32_WINNT_WIN8
+		if(mUseFlipMode)
 		{
 			mSwapChainDesc.SampleDesc.Count = 1;
 			mSwapChainDesc.SampleDesc.Quality = 0;
+			mSwapChainDesc.BufferCount = 2;
+#if defined(_WIN32_WINNT_WIN10) // we want DXGI_SWAP_EFFECT_FLIP_DISCARD even if _WIN32_WINNT < _WIN32_WINNT_WIN10 but runtime is Win10
+			mSwapChainDesc.SwapEffect = IsWindows10OrGreater() ? DXGI_SWAP_EFFECT_FLIP_DISCARD : DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+#else
+			mSwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+#endif
 		}
 		else
+#endif	
 		{
+			assert(!mUseFlipMode);
 			mSwapChainDesc.SampleDesc.Count = mFSAAType.Count;
 			mSwapChainDesc.SampleDesc.Quality = mFSAAType.Quality;
+			mSwapChainDesc.BufferCount = 1;
+			mSwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 		}
-
-#if defined(_WIN32_WINNT_WIN8) && _WIN32_WINNT >= _WIN32_WINNT_WIN8
-		mSwapChainDesc.BufferCount = mUseFlipSequentialMode ? 2 : 1;
-		mSwapChainDesc.SwapEffect = mUseFlipSequentialMode ? DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL : DXGI_SWAP_EFFECT_DISCARD;
-#else
-		mSwapChainDesc.BufferCount = 1;
-		mSwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-#endif	
 
         mSwapChainDesc.BufferUsage          = DXGI_USAGE_RENDER_TARGET_OUTPUT;
         mSwapChainDesc.OutputWindow         = mHWnd;
@@ -961,8 +947,8 @@ namespace Ogre
             // frame rates no matter what buffering modes are used (odd - perhaps a
             // timer issue in D3D11 since GL doesn't suffer from this) 
             // low is < 200fps in this context
-            LogManager::getSingleton().logMessage("D3D11: WARNING - "
-                "disabling VSync in windowed mode can cause timing issues at lower "
+            LogManager::getSingleton().logWarning(
+                "D3D11: disabling VSync in windowed mode can cause timing issues at lower "
                 "frame rates, turn VSync on if you observe this problem.");
         }
 
@@ -1272,7 +1258,7 @@ namespace Ogre
     D3D11RenderWindowCoreWindow::D3D11RenderWindowCoreWindow(D3D11Device& device)
         : D3D11RenderWindowSwapChainBased(device)
     {
-        mUseFlipSequentialMode = true;
+        mUseFlipMode = true;
     }
 
     float D3D11RenderWindowCoreWindow::getViewPointToPixelScale()
@@ -1358,7 +1344,7 @@ namespace Ogre
         mSwapChainDesc.Format               = _getSwapChainFormat();
         mSwapChainDesc.Stereo               = false;
 
-        assert(mUseFlipSequentialMode);                                             // i.e. no FSAA for swapchain, but can be enabled in separate backbuffer
+        assert(mUseFlipMode);                                                       // i.e. no FSAA for swapchain, but can be enabled in separate backbuffer
         mSwapChainDesc.SampleDesc.Count     = 1;
         mSwapChainDesc.SampleDesc.Quality   = 0;
 
@@ -1415,7 +1401,7 @@ namespace Ogre
         : D3D11RenderWindowSwapChainBased(device)
         , mCompositionScale(1.0f, 1.0f)
     {
-        mUseFlipSequentialMode = true;
+        mUseFlipMode = true;
     }
 
     float D3D11RenderWindowSwapChainPanel::getViewPointToPixelScale()
@@ -1507,12 +1493,12 @@ namespace Ogre
         rsys->determineFSAASettings(mFSAA, mFSAAHint, _getRenderFormat(), &mFSAAType);
 #endif
 
-        mSwapChainDesc.Width                = mWidth;                                    // Use automatic sizing.
+        mSwapChainDesc.Width                = mWidth;                               // Use automatic sizing.
         mSwapChainDesc.Height               = mHeight;
         mSwapChainDesc.Format               = _getSwapChainFormat();
         mSwapChainDesc.Stereo               = false;
 
-        assert(mUseFlipSequentialMode);                                             // i.e. no FSAA for swapchain, but can be enabled in separate backbuffer
+        assert(mUseFlipMode);                                                       // i.e. no FSAA for swapchain, but can be enabled in separate backbuffer
         mSwapChainDesc.SampleDesc.Count     = 1;
         mSwapChainDesc.SampleDesc.Quality   = 0;
 

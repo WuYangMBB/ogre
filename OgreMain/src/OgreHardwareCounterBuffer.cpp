@@ -28,7 +28,6 @@ THE SOFTWARE.
 
 #include "OgreStableHeaders.h"
 #include "OgreHardwareCounterBuffer.h"
-#include "OgreHardwareBufferManager.h"
 #include "OgreDefaultHardwareBufferManager.h"
 
 namespace Ogre {
@@ -44,7 +43,7 @@ namespace Ogre {
         // Create a shadow buffer if required
         if (mUseShadowBuffer)
         {
-            mShadowBuffer = OGRE_NEW DefaultHardwareCounterBuffer(mMgr, sizeBytes, HardwareBuffer::HBU_DYNAMIC, false);
+            mShadowBuffer.reset(new DefaultHardwareCounterBuffer(mMgr, sizeBytes, HardwareBuffer::HBU_DYNAMIC, false));
         }
     }
     
@@ -54,6 +53,5 @@ namespace Ogre {
         {
             mMgr->_notifyCounterBufferDestroyed(this);
         }
-        OGRE_DELETE mShadowBuffer;
     }
 }

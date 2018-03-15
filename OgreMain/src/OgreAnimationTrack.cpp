@@ -29,9 +29,6 @@ THE SOFTWARE.
 #include "OgreAnimationTrack.h"
 #include "OgreAnimation.h"
 #include "OgreKeyFrame.h"
-#include "OgreNode.h"
-#include "OgreMesh.h"
-#include "OgreException.h"
 
 namespace Ogre {
 
@@ -1032,11 +1029,11 @@ namespace Ogre {
             {
                 // look for keyframes which have a pose influence which is non-zero
                 const VertexPoseKeyFrame* kf = static_cast<const VertexPoseKeyFrame*>(*i);
-                VertexPoseKeyFrame::ConstPoseRefIterator poseIt
-                    = kf->getPoseReferenceIterator();
-                while (poseIt.hasMoreElements())
+                VertexPoseKeyFrame::PoseRefList::const_iterator poseIt
+                    = kf->getPoseReferences().begin();
+                for (;poseIt != kf->getPoseReferences().end(); ++poseIt)
                 {
-                    const VertexPoseKeyFrame::PoseRef& poseRef = poseIt.getNext();
+                    const VertexPoseKeyFrame::PoseRef& poseRef = *poseIt;
                     if (poseRef.influence > 0.0f)
                         return true;
                 }

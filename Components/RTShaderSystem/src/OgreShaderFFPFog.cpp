@@ -24,15 +24,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 -----------------------------------------------------------------------------
 */
-#include "OgreShaderFFPFog.h"
+#include "OgreShaderPrecompiledHeaders.h"
 #ifdef RTSHADER_SYSTEM_BUILD_CORE_SHADERS
-#include "OgreShaderFFPRenderState.h"
-#include "OgreShaderProgram.h"
-#include "OgreShaderParameter.h"
-#include "OgreShaderProgramSet.h"
-#include "OgrePass.h"
-#include "OgreShaderGenerator.h"
-#include "OgreMaterialSerializer.h"
 
 namespace Ogre {
 namespace RTShader {
@@ -204,32 +197,28 @@ bool FFPFog::addFunctionInvocations(ProgramSet* programSet)
     Function* vsMain = vsProgram->getEntryPointFunction();
     Function* psMain = psProgram->getEntryPointFunction();
     FunctionInvocation* curFuncInvocation = NULL;   
-    int internalCounter;
-
 
     // Per pixel fog.
     if (mCalcMode == CM_PER_PIXEL)
     {
-        internalCounter = 0;
         //! [func_invoc]
-        curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_PIXELFOG_DEPTH, FFP_VS_FOG, internalCounter++);
+        curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_PIXELFOG_DEPTH, FFP_VS_FOG);
         curFuncInvocation->pushOperand(mWorldViewProjMatrix, Operand::OPS_IN);
         curFuncInvocation->pushOperand(mVSInPos, Operand::OPS_IN);  
         curFuncInvocation->pushOperand(mVSOutDepth, Operand::OPS_OUT);  
         vsMain->addAtomInstance(curFuncInvocation);     
         //! [func_invoc]
 
-        internalCounter = 0;
         switch (mFogMode)
         {
         case FOG_LINEAR:
-            curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_PIXELFOG_LINEAR, FFP_PS_FOG, internalCounter++);
+            curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_PIXELFOG_LINEAR, FFP_PS_FOG);
             break;
         case FOG_EXP:
-            curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_PIXELFOG_EXP, FFP_PS_FOG, internalCounter++);
+            curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_PIXELFOG_EXP, FFP_PS_FOG);
             break;
         case FOG_EXP2:
-            curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_PIXELFOG_EXP2, FFP_PS_FOG, internalCounter++);
+            curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_PIXELFOG_EXP2, FFP_PS_FOG);
             break;
         case FOG_NONE:
         default:
@@ -248,18 +237,16 @@ bool FFPFog::addFunctionInvocations(ProgramSet* programSet)
     // Per vertex fog.
     else
     {
-        internalCounter = 0;
-
         switch (mFogMode)
         {
         case FOG_LINEAR:
-            curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_VERTEXFOG_LINEAR, FFP_VS_FOG, internalCounter++);
+            curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_VERTEXFOG_LINEAR, FFP_VS_FOG);
             break;
         case FOG_EXP:
-            curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_VERTEXFOG_EXP, FFP_VS_FOG, internalCounter++);
+            curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_VERTEXFOG_EXP, FFP_VS_FOG);
             break;
         case FOG_EXP2:
-            curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_VERTEXFOG_EXP2, FFP_VS_FOG, internalCounter++);
+            curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_VERTEXFOG_EXP2, FFP_VS_FOG);
             break;
         case FOG_NONE:
         default:
@@ -272,10 +259,7 @@ bool FFPFog::addFunctionInvocations(ProgramSet* programSet)
         curFuncInvocation->pushOperand(mVSOutFogFactor, Operand::OPS_OUT);
         vsMain->addAtomInstance(curFuncInvocation);     
 
-
-        internalCounter = 0;
-
-        curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_LERP, FFP_PS_FOG, internalCounter++);
+        curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_LERP, FFP_PS_FOG);
         curFuncInvocation->pushOperand(mFogColour, Operand::OPS_IN);
         curFuncInvocation->pushOperand(mPSOutDiffuse, Operand::OPS_IN);
         curFuncInvocation->pushOperand(mPSInFogFactor, Operand::OPS_IN);

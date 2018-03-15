@@ -31,6 +31,7 @@
 #include "OgreApplicationContext.h"
 
 #include "Sample.h"
+#include "OgreRenderWindow.h"
 
 namespace OgreBites
 {
@@ -44,8 +45,8 @@ namespace OgreBites
     public:
         Ogre::RenderWindow* mWindow;
 
-        SampleContext(const Ogre::String& appName = OGRE_VERSION_NAME, bool grabInput = true)
-        : ApplicationContext(appName, grabInput), mWindow(NULL)
+        SampleContext(const Ogre::String& appName = OGRE_VERSION_NAME)
+        : ApplicationContext(appName), mWindow(NULL)
         {
             mCurrentSample = 0;
             mSamplePaused = false;
@@ -129,10 +130,9 @@ namespace OgreBites
         /*-----------------------------------------------------------------------------
         | This function encapsulates the entire lifetime of the context.
         -----------------------------------------------------------------------------*/
-#if OGRE_PLATFORM != OGRE_PLATFORM_NACL
         virtual void go(Sample* initialSample = 0)
         {
-#if OGRE_PLATFORM == OGRE_PLATFORM_APPLE_IOS || ((OGRE_PLATFORM == OGRE_PLATFORM_APPLE) && __LP64__)
+#if OGRE_PLATFORM == OGRE_PLATFORM_APPLE_IOS
             createRoot();
 
             if (!oneTimeConfig()) return;
@@ -173,7 +173,6 @@ namespace OgreBites
             }
 #endif
         }
-#endif
 
         virtual void loadStartUpSample() {}
         
@@ -273,6 +272,9 @@ namespace OgreBites
 
         virtual bool keyPressed(const KeyboardEvent& evt)
         {
+            // Ignore repeated signals from key being held down.
+            if (evt.repeat) return true;
+
             if (mCurrentSample && !mSamplePaused) return mCurrentSample->keyPressed(evt);
             return true;
         }

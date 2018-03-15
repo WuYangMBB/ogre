@@ -30,12 +30,7 @@ THE SOFTWARE.
 
 // Precompiler options
 #include "OgrePrerequisites.h"
-
 #include "OgreSceneManagerEnumerator.h"
-
-#if OGRE_PLATFORM == OGRE_PLATFORM_ANDROID
-#include "Android/OgreAndroidLogListener.h"
-#endif
 
 #include <exception>
 #include "OgreHeaderPrefix.h"
@@ -48,6 +43,8 @@ namespace Ogre
     /** \addtogroup General
     *  @{
     */
+
+    class AndroidLogListener;
 
     typedef vector<RenderSystem*>::type RenderSystemList;
     
@@ -75,48 +72,60 @@ namespace Ogre
         String mVersion;
         String mConfigFileName;
         bool mQueuedEnd;
-        /// In case multiple render windows are created, only once are the resources loaded.
+        // In case multiple render windows are created, only once are the resources loaded.
         bool mFirstTimePostWindowInit;
 
-        // Singletons
-        LogManager* mLogManager;
-        ControllerManager* mControllerManager;
-        SceneManagerEnumerator* mSceneManagerEnum;
+        // ordered in reverse destruction sequence
+        std::unique_ptr<LogManager> mLogManager;
+#if OGRE_PLATFORM == OGRE_PLATFORM_ANDROID
+        std::unique_ptr<AndroidLogListener> mAndroidLogger;
+#endif
+        std::unique_ptr<ScriptCompilerManager> mCompilerManager;
+        std::unique_ptr<DynLibManager> mDynLibManager;
+        std::unique_ptr<Timer> mTimer;
+        std::unique_ptr<WorkQueue> mWorkQueue;
+        std::unique_ptr<ResourceGroupManager> mResourceGroupManager;
+        std::unique_ptr<ResourceBackgroundQueue> mResourceBackgroundQueue;
+        std::unique_ptr<MaterialManager> mMaterialManager;
+        std::unique_ptr<HighLevelGpuProgramManager> mHighLevelGpuProgramManager;
+        std::unique_ptr<ControllerManager> mControllerManager;
+        std::unique_ptr<MeshManager> mMeshManager;
+        std::unique_ptr<SkeletonManager> mSkeletonManager;
+
+        std::unique_ptr<ArchiveFactory> mFileSystemArchiveFactory;
+        std::unique_ptr<ArchiveFactory> mEmbeddedZipArchiveFactory;
+        std::unique_ptr<ArchiveFactory> mZipArchiveFactory;
+        std::unique_ptr<ArchiveManager> mArchiveManager;
+
+        typedef map<String, MovableObjectFactory*>::type MovableObjectFactoryMap;
+        MovableObjectFactoryMap mMovableObjectFactoryMap;
+        std::unique_ptr<MovableObjectFactory> mRibbonTrailFactory;
+        std::unique_ptr<MovableObjectFactory> mBillboardChainFactory;
+        std::unique_ptr<MovableObjectFactory> mManualObjectFactory;
+        std::unique_ptr<MovableObjectFactory> mBillboardSetFactory;
+        std::unique_ptr<MovableObjectFactory> mLightFactory;
+        std::unique_ptr<MovableObjectFactory> mEntityFactory;
+
+        std::unique_ptr<ParticleSystemManager> mParticleManager;
+        std::unique_ptr<LodStrategyManager> mLodStrategyManager;
+        std::unique_ptr<Profiler> mProfiler;
+
+        std::unique_ptr<ExternalTextureSourceManager> mExternalTextureSourceManager;
+        std::unique_ptr<CompositorManager> mCompositorManager;
+        std::unique_ptr<RenderSystemCapabilitiesManager> mRenderSystemCapabilitiesManager;
+
+        std::unique_ptr<SceneManagerEnumerator> mSceneManagerEnum;
         typedef deque<SceneManager*>::type SceneManagerStack;
         SceneManagerStack mSceneManagerStack;
-        DynLibManager* mDynLibManager;
-        ArchiveManager* mArchiveManager;
-        MaterialManager* mMaterialManager;
-        MeshManager* mMeshManager;
-        ParticleSystemManager* mParticleManager;
-        SkeletonManager* mSkeletonManager;
-        
-        ArchiveFactory *mZipArchiveFactory;
-        ArchiveFactory *mEmbeddedZipArchiveFactory;
-        ArchiveFactory *mFileSystemArchiveFactory;
-        
-#if OGRE_PLATFORM == OGRE_PLATFORM_ANDROID
-        AndroidLogListener* mAndroidLogger;
-#endif
-        
-        ResourceGroupManager* mResourceGroupManager;
-        ResourceBackgroundQueue* mResourceBackgroundQueue;
-        ShadowTextureManager* mShadowTextureManager;
-        RenderSystemCapabilitiesManager* mRenderSystemCapabilitiesManager;
-        ScriptCompilerManager *mCompilerManager;
-        LodStrategyManager *mLodStrategyManager;
 
-        Timer* mTimer;
+        std::unique_ptr<ShadowTextureManager> mShadowTextureManager;
+
         RenderWindow* mAutoWindow;
-        Profiler* mProfiler;
-        HighLevelGpuProgramManager* mHighLevelGpuProgramManager;
-        ExternalTextureSourceManager* mExternalTextureSourceManager;
-        CompositorManager* mCompositorManager;      
+
         unsigned long mNextFrame;
         Real mFrameSmoothingTime;
         bool mRemoveQueueStructuresOnClear;
         Real mDefaultMinPixelSize;
-        HardwareBuffer::UploadOptions mFreqUpdatedBuffersUploadOption;
 
     public:
         typedef vector<DynLib*>::type PluginLibList;
@@ -127,25 +136,13 @@ namespace Ogre
         /// List of Plugin instances registered
         PluginInstanceList mPlugins;
 
-        typedef map<String, MovableObjectFactory*>::type MovableObjectFactoryMap;
-        MovableObjectFactoryMap mMovableObjectFactoryMap;
         uint32 mNextMovableObjectTypeFlag;
-        // stock movable factories
-        MovableObjectFactory* mEntityFactory;
-        MovableObjectFactory* mLightFactory;
-        MovableObjectFactory* mBillboardSetFactory;
-        MovableObjectFactory* mManualObjectFactory;
-        MovableObjectFactory* mBillboardChainFactory;
-        MovableObjectFactory* mRibbonTrailFactory;
 
         typedef map<String, RenderQueueInvocationSequence*>::type RenderQueueInvocationSequenceMap;
         RenderQueueInvocationSequenceMap mRQSequenceMap;
 
         /// Are we initialised yet?
         bool mIsInitialised;
-
-        WorkQueue* mWorkQueue;
-
         ///Tells whether blend indices information needs to be passed to the GPU
         bool mIsBlendIndicesGpuRedundant;
         ///Tells whether blend weights information needs to be passed to the GPU
@@ -263,12 +260,6 @@ namespace Ogre
          */
         bool showConfigDialog(ConfigDialog* dialog);
 
-        /** @overload
-
-            @deprecated use showConfigDialog(ConfigDialog* dialog);
-         */
-        OGRE_DEPRECATED bool showConfigDialog(void);
-
         /** Adds a new rendering subsystem to the list of available renderers.
             @remarks
                 Intended for use by advanced users and plugin writers only!
@@ -366,70 +357,46 @@ namespace Ogre
         */
         void addSceneManagerFactory(SceneManagerFactory* fact);
 
-        /** Unregister a SceneManagerFactory.
-        */
+        /// @copydoc SceneManagerEnumerator::addFactory
         void removeSceneManagerFactory(SceneManagerFactory* fact);
 
-        /** Get more information about a given type of SceneManager.
-        @remarks
-            The metadata returned tells you a few things about a given type 
-            of SceneManager, which can be created using a factory that has been
-            registered already. 
-        @param typeName The type name of the SceneManager you want to enquire on.
-            If you don't know the typeName already, you can iterate over the 
-            metadata for all types using getMetaDataIterator.
-        */
+        /// @copydoc SceneManagerEnumerator::getMetaData(const String& )
         const SceneManagerMetaData* getSceneManagerMetaData(const String& typeName) const;
 
-        /** Iterate over all types of SceneManager available for construction, 
-            providing some information about each one.
-        */
-        SceneManagerEnumerator::MetaDataIterator getSceneManagerMetaDataIterator(void) const;
+        /// @copydoc SceneManagerEnumerator::getMetaData()
+        const SceneManagerEnumerator::MetaDataList& getSceneManagerMetaData() const;
 
-        /** Create a SceneManager instance of a given type.
-        @remarks
-            You can use this method to create a SceneManager instance of a 
-            given specific type. You may know this type already, or you may
-            have discovered it by looking at the results from getMetaDataIterator.
-        @note
-            This method throws an exception if the named type is not found.
-        @param typeName String identifying a unique SceneManager type
-        @param instanceName Optional name to given the new instance that is
-            created. If you leave this blank, an auto name will be assigned.
-        */
+        /// @copydoc SceneManagerEnumerator::getMetaDataIterator
+        OGRE_DEPRECATED SceneManagerEnumerator::MetaDataIterator getSceneManagerMetaDataIterator(void) const;
+
+        /// create a default scene manager
+        SceneManager* createSceneManager()
+        {
+            return createSceneManager(DefaultSceneManagerFactory::FACTORY_TYPE_NAME);
+        }
+
+        /// @copydoc SceneManagerEnumerator::createSceneManager(const String&, const String&)
         SceneManager* createSceneManager(const String& typeName, 
             const String& instanceName = BLANKSTRING);
 
-        /** Create a SceneManager instance based on scene type support.
-        @remarks
-            Creates an instance of a SceneManager which supports the scene types
-            identified in the parameter. If more than one type of SceneManager 
-            has been registered as handling that combination of scene types, 
-            in instance of the last one registered is returned.
-        @note This method always succeeds, if a specific scene manager is not
-            found, the default implementation is always returned.
-        @param typeMask A mask containing one or more SceneType flags
-        @param instanceName Optional name to given the new instance that is
-            created. If you leave this blank, an auto name will be assigned.
-        */
-        SceneManager* createSceneManager(SceneTypeMask typeMask, 
-            const String& instanceName = BLANKSTRING);
+        /// @copydoc SceneManagerEnumerator::createSceneManager(SceneTypeMask, const String&)
+        OGRE_DEPRECATED SceneManager* createSceneManager(SceneTypeMask typeMask,
+            const String& instanceName = BLANKSTRING)
+        { return createSceneManager(DefaultSceneManagerFactory::FACTORY_TYPE_NAME, instanceName); }
 
-        /** Destroy an instance of a SceneManager. */
+        /// @copydoc SceneManagerEnumerator::destroySceneManager
         void destroySceneManager(SceneManager* sm);
 
-        /** Get an existing SceneManager instance that has already been created,
-            identified by the instance name.
-        @param instanceName The name of the instance to retrieve.
-        */
+        /// @copydoc SceneManagerEnumerator::getSceneManager
         SceneManager* getSceneManager(const String& instanceName) const;
 
-        /** Determines if a given SceneManager already exists
-        @param instanceName The name of the instance to retrieve.
-        */
+        /// @copydoc SceneManagerEnumerator::hasSceneManager
         bool hasSceneManager(const String& instanceName) const;
-        /** Get an iterator over all the existing SceneManager instances. */
-        SceneManagerEnumerator::SceneManagerIterator getSceneManagerIterator(void);
+        /// @copydoc SceneManagerEnumerator::getSceneManagerIterator
+        OGRE_DEPRECATED SceneManagerEnumerator::SceneManagerIterator getSceneManagerIterator(void);
+
+        /// @copydoc SceneManagerEnumerator::getSceneManagers
+        const SceneManagerEnumerator::Instances& getSceneManagers(void) const;
 
         /** Retrieves a reference to the current TextureManager.
             @remarks
@@ -454,12 +421,6 @@ namespace Ogre
                 and is provided for convenience to scripting engines.
         */
         MeshManager* getMeshManager(void);
-
-        /** Utility function for getting a better description of an error
-            code.
-            @deprecated obsolete API
-        */
-        OGRE_DEPRECATED String getErrorDescription(long errorNumber);
 
         /** Registers a FrameListener which will be called back every frame.
             @remarks
@@ -557,67 +518,6 @@ namespace Ogre
                 for systems which need to shut down Ogre on demand.
         */
         void shutdown(void);
-
-        /** Adds a location to the list of searchable locations for a
-            Resource type.
-            @remarks
-                Resource files (textures, models etc) need to be loaded from
-                specific locations. By calling this method, you add another 
-                search location to the list. Locations added first are preferred
-                over locations added later.
-            @par
-                Locations can be folders, compressed archives, even perhaps
-                remote locations. Facilities for loading from different
-                locations are provided by plugins which provide
-                implementations of the Archive class.
-                All the application user has to do is specify a 'loctype'
-                string in order to indicate the type of location, which
-                should map onto one of the provided plugins. Ogre comes
-                configured with the 'FileSystem' (folders) and 'Zip' (archive
-                compressed with the pkzip / WinZip etc utilities) types.
-            @par
-                You can also supply the name of a resource group which should
-                have this location applied to it. The 
-                ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME group is the
-                default, and one resource group which will always exist. You
-                should consider defining resource groups for your more specific
-                resources (e.g. per level) so that you can control loading /
-                unloading better.
-            @param
-                name The name of the location, e.g. './data' or
-                '/compressed/gamedata.zip'
-            @param
-                locType A string identifying the location type, e.g.
-                'FileSystem' (for folders), 'Zip' etc. Must map to a
-                registered plugin which deals with this type (FileSystem and
-                Zip should always be available)
-            @param
-                groupName Type of name of the resource group which this location
-                should apply to; defaults to the General group which applies to
-                all non-specific resources.
-            @param
-                recursive If the resource location has a concept of recursive
-                directory traversal, enabling this option will mean you can load
-                resources in subdirectories using only their unqualified name.
-                The default is to disable this so that resources in subdirectories
-                with the same name are still unique.
-            @see
-                Archive
-            @deprecated use ResourceGroupManager::addResourceLocation
-        */
-        OGRE_DEPRECATED void addResourceLocation(const String& name, const String& locType,
-            const String& groupName = ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, 
-            bool recursive = false);
-
-        /** Removes a resource location from the list.
-        @see addResourceLocation
-        @param name The name of the resource location as specified in addResourceLocation
-        @param groupName The name of the resource group to which this location 
-            was assigned.
-        @deprecated use ResourceGroupManager::removeResourceLocation
-        */
-        OGRE_DEPRECATED void removeResourceLocation(const String& name,
-            const String& groupName = ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
 
         /** Helper method to assist you in creating writeable file streams.
         @remarks
@@ -1022,7 +922,7 @@ namespace Ogre
             However, you must remember to assign yourself a new channel through 
             which to process your tasks.
         */
-        WorkQueue* getWorkQueue() const { return mWorkQueue; }
+        WorkQueue* getWorkQueue() const { return mWorkQueue.get(); }
 
         /** Replace the current work queue with an alternative. 
             You can use this method to replace the internal implementation of
@@ -1067,19 +967,6 @@ namespace Ogre
         /** Get the default minimum pixel size for object to be rendered by
         */
         Real getDefaultMinPixelSize() { return mDefaultMinPixelSize; }
-    
-        /** Set the default upload option for buffers that frequently changed
-        Setting upload option to HBU_ON_DEMAND can increase the framerate in multi-device scenarios,
-        as it will upload frequently changing buffers to devices that require them.
-        However setting the HBU_ON_DEMAND may also introduce hiccups.
-        */
-        void setFreqUpdatedBuffersUploadOption(HardwareBuffer::UploadOptions uploadOp) { mFreqUpdatedBuffersUploadOption = uploadOp; }
-        /** Get the default upload option for buffers that frequently changed
-        @note
-            To use this feature see Camera::setFreqUpdatedBuffersUploadOption()
-        */
-        HardwareBuffer::UploadOptions getFreqUpdatedBuffersUploadOption() const { return mFreqUpdatedBuffersUploadOption; }
-
     };
     /** @} */
     /** @} */

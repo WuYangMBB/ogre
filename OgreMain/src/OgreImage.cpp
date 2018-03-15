@@ -27,12 +27,8 @@ THE SOFTWARE.
 */
 #include "OgreStableHeaders.h"
 #include "OgreImage.h"
-#include "OgreException.h"
 #include "OgreImageCodec.h"
-#include "OgreColourValue.h"
-#include "OgreMath.h"
 #include "OgreImageResampler.h"
-#include "OgreResourceGroupManager.h"
 
 namespace Ogre {
     ImageCodec::~ImageCodec() {
@@ -269,7 +265,7 @@ namespace Ogre {
 
     //-----------------------------------------------------------------------------
     Image & Image::loadRawData(
-        DataStreamPtr& stream, 
+        const DataStreamPtr& stream,
         uint32 uWidth, uint32 uHeight, uint32 uDepth,
         PixelFormat eFormat,
         size_t numFaces, uint32 numMipMaps)
@@ -297,7 +293,7 @@ namespace Ogre {
 
         String strExt;
 
-        size_t pos = strFileName.find_last_of(".");
+        size_t pos = strFileName.find_last_of('.');
         if( pos != String::npos && pos < (strFileName.length() - 1))
         {
             strExt = strFileName.substr(pos+1);
@@ -317,7 +313,7 @@ namespace Ogre {
         }
 
         String strExt;
-        size_t pos = filename.find_last_of(".");
+        size_t pos = filename.find_last_of('.');
         if( pos == String::npos )
             OGRE_EXCEPT(
             Exception::ERR_INVALIDPARAMS, 
@@ -377,7 +373,7 @@ namespace Ogre {
         return pCodec->encode(wrapper, codeDataPtr);
     }
     //-----------------------------------------------------------------------------
-    Image & Image::load(DataStreamPtr& stream, const String& type )
+    Image & Image::load(const DataStreamPtr& stream, const String& type )
     {
         freeMemory();
 
@@ -431,7 +427,7 @@ namespace Ogre {
         return *this;
     }
     //---------------------------------------------------------------------
-    String Image::getFileExtFromMagic(DataStreamPtr stream)
+    String Image::getFileExtFromMagic(const DataStreamPtr stream)
     {
         // read the first 32 bytes or file size, if less
         size_t magicLen = std::min(stream->size(), (size_t)32);
@@ -773,8 +769,9 @@ namespace Ogre {
 
     }
     //---------------------------------------------------------------------
-    Image & Image::loadTwoImagesAsRGBA(DataStreamPtr& rgbStream, DataStreamPtr& alphaStream,
-        PixelFormat fmt, const String& rgbType, const String& alphaType)
+    Image& Image::loadTwoImagesAsRGBA(const DataStreamPtr& rgbStream,
+                                      const DataStreamPtr& alphaStream, PixelFormat fmt,
+                                      const String& rgbType, const String& alphaType)
     {
         Image rgb, alpha;
 
@@ -854,8 +851,8 @@ namespace Ogre {
 
                 // now selectively add the alpha
                 PixelBox srcAlpha = alpha.getPixelBox(face, mip);
-                uchar* psrcAlpha = static_cast<uchar*>(srcAlpha.data);
-                uchar* pdst = static_cast<uchar*>(dst.data);
+                uchar* psrcAlpha = srcAlpha.data;
+                uchar* pdst = dst.data;
                 for (size_t d = 0; d < mDepth; ++d)
                 {
                     for (size_t y = 0; y < mHeight; ++y)

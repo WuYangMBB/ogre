@@ -29,9 +29,6 @@ THE SOFTWARE.
 #include "OgreLight.h"
 #include "OgreEdgeListBuilder.h"
 #include "OgreOptimisedUtil.h"
-#include "OgreLogManager.h"
-#include "OgreRoot.h"
-#include "OgreSceneManager.h"
 
 namespace Ogre {
     const LightList& ShadowRenderable::getLights(void) const 
@@ -179,10 +176,10 @@ namespace Ogre {
         //Check if index buffer is to small 
         if (preCountIndexes > indexBuffer->getNumIndexes())
         {
-            LogManager::getSingleton().logMessage(LML_CRITICAL, 
-                String("Warning: shadow index buffer size to small. Auto increasing buffer size to") + 
+            LogManager::getSingleton().logWarning(
+                "shadow index buffer size to small. Auto increasing buffer size to" +
                 StringConverter::toString(sizeof(unsigned short) * preCountIndexes));
-            
+
             SceneManager* pManager = Root::getSingleton()._getCurrentSceneManager();
             if (pManager)
             {

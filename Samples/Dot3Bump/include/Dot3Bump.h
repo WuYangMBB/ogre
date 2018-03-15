@@ -120,11 +120,8 @@ protected:
         setupLights();
         setupControls();
 
-        mCameraNode->setPosition(0, 0, 500);
-
-#if OGRE_PLATFORM != OGRE_PLATFORM_APPLE_IOS
-        setDragLook(true);
-#endif
+        mCameraMan->setStyle(CS_ORBIT);
+        mCameraMan->setYawPitchDist(Radian(0), Radian(0), 500);
     }
 
 
@@ -148,9 +145,9 @@ protected:
             // Find the location of the core shader libs
             for (; it != itEnd; ++it)
             {
-                if ((*it)->archive->getName().find("RTShaderLib") != Ogre::String::npos)
+                if (it->archive->getName().find("RTShaderLib") != Ogre::String::npos)
                 {
-                    shaderCoreLibsPath = (*it)->archive->getName() + "/";   
+                    shaderCoreLibsPath = it->archive->getName() + "/";
                     coreLibsFound = true;
                     break;
                 }

@@ -28,10 +28,6 @@ THE SOFTWARE.
 #ifndef __PixelFormatDescriptions_H__
 #define __PixelFormatDescriptions_H__
 
-#include "OgrePrerequisites.h"
-#include "OgreCommon.h"
-#include "OgreHeaderPrefix.h"
-
 namespace Ogre {
     //-----------------------------------------------------------------------
     /**
@@ -114,19 +110,6 @@ namespace Ogre {
             0, 0, 0, 8,
             /* Masks and shifts */
             0, 0, 0, 0xFF, 0, 0, 0, 0
-        },
-        //-----------------------------------------------------------------------
-        {"PF_A4L4",
-            /* Bytes per element */
-            1,
-            /* Flags */
-            PFF_HASALPHA | PFF_LUMINANCE | PFF_NATIVEENDIAN,
-            /* Component type and count */
-            PCT_BYTE, 2,
-            /* rbits, gbits, bbits, abits */
-            4, 0, 0, 4,
-            /* Masks and shifts */
-            0x0F, 0, 0, 0xF0, 0, 0, 0, 4
         },
         //-----------------------------------------------------------------------
         {"PF_BYTE_LA",
@@ -457,11 +440,11 @@ namespace Ogre {
         //-----------------------------------------------------------------------
         {"PF_DEPTH",
             /* Bytes per element */
-            4,
+            2,
             /* Flags */
-            PFF_DEPTH,
+            PFF_LUMINANCE | PFF_DEPTH,
             /* Component type and count */
-            PCT_FLOAT16, 1, // ?
+            PCT_SHORT, 1,
             /* rbits, gbits, bbits, abits */
             16, 0, 0, 0,
             /* Masks and shifts */
@@ -760,7 +743,7 @@ namespace Ogre {
             /* rbits, gbits, bbits, abits */
             16, 16, 16, 0,
             /* Masks and shifts */
-            0xFFFF00000000, 0x0000FFFF0000, 0x00000000FFFF, 0,
+            0xFFFF00000000ULL, 0x0000FFFF0000ULL, 0x00000000FFFFULL, 0,
             32, 16, 0, 0
         },
         //-----------------------------------------------------------------------
@@ -774,7 +757,7 @@ namespace Ogre {
             /* rbits, gbits, bbits, abits */
             16, 16, 16, 16,
             /* Masks and shifts */
-            0xFFFF000000000000, 0x0000FFFF00000000, 0x00000000FFFF0000, 0x000000000000FFFF,
+            0xFFFF000000000000ULL, 0x0000FFFF00000000ULL, 0x00000000FFFF0000ULL, 0x000000000000FFFFULL,
             48, 32, 16, 0
         },
         //-----------------------------------------------------------------------
@@ -802,7 +785,7 @@ namespace Ogre {
             /* rbits, gbits, bbits, abits */
             32, 32, 0, 0,
             /* Masks and shifts */
-            0xFFFFFFFF00000000, 0xFFFFFFFF, 0, 0,
+            0xFFFFFFFF00000000ULL, 0xFFFFFFFFULL, 0, 0,
             32, 0, 0, 0
         },
         //-----------------------------------------------------------------------
@@ -928,7 +911,7 @@ namespace Ogre {
             /* rbits, gbits, bbits, abits */
             16, 16, 16, 0,
             /* Masks and shifts */
-            0xFFFF00000000, 0x0000FFFF0000, 0x00000000FFFF, 0,
+            0xFFFF00000000ULL, 0x0000FFFF0000ULL, 0x00000000FFFFULL, 0,
             32, 16, 0, 0
         },
         //-----------------------------------------------------------------------
@@ -942,7 +925,7 @@ namespace Ogre {
             /* rbits, gbits, bbits, abits */
             16, 16, 16, 16,
             /* Masks and shifts */
-            0xFFFF000000000000, 0x0000FFFF00000000, 0x00000000FFFF0000, 0x000000000000FFFF,
+            0xFFFF000000000000ULL, 0x0000FFFF00000000ULL, 0x00000000FFFF0000ULL, 0x000000000000FFFFULL,
             48, 32, 16, 0
         },
         //-----------------------------------------------------------------------
@@ -970,7 +953,7 @@ namespace Ogre {
             /* rbits, gbits, bbits, abits */
             32, 32, 0, 0,
             /* Masks and shifts */
-            0xFFFFFFFF00000000, 0xFFFFFFFF, 0, 0,
+            0xFFFFFFFF00000000ULL, 0xFFFFFFFFULL, 0, 0,
             32, 0, 0, 0
         },
         //-----------------------------------------------------------------------
@@ -1107,19 +1090,6 @@ namespace Ogre {
             0, 0, 0, 0, 0, 0, 0, 0
         },
         //-----------------------------------------------------------------------
-        {"PF_BC7_UNORM_SRGB",
-            /* Bytes per element */
-            0,
-            /* Flags */
-            PFF_COMPRESSED | PFF_HASALPHA,
-            /* Component type and count */
-            PCT_BYTE, 4,
-            /* rbits, gbits, bbits, abits */
-            0, 0, 0, 0,
-            /* Masks and shifts */
-            0, 0, 0, 0, 0, 0, 0, 0
-        },
-        //-----------------------------------------------------------------------
         {"PF_R8",
             /* Bytes per element */
             1,
@@ -1242,7 +1212,7 @@ namespace Ogre {
             /* rbits, gbits, bbits, abits */
             16, 16, 16, 0,
             /* Masks and shifts */
-            0xFFFF00000000, 0x0000FFFF0000, 0x00000000FFFF, 0,
+            0xFFFF00000000ULL, 0x0000FFFF0000ULL, 0x00000000FFFFULL, 0,
             32, 16, 0, 0
         },
         //-----------------------------------------------------------------------
@@ -1256,7 +1226,7 @@ namespace Ogre {
             /* rbits, gbits, bbits, abits */
             16, 16, 16, 16,
             /* Masks and shifts */
-            0xFFFF000000000000, 0x0000FFFF00000000, 0x00000000FFFF0000, 0x000000000000FFFF,
+            0xFFFF000000000000ULL, 0x0000FFFF00000000ULL, 0x00000000FFFF0000ULL, 0x000000000000FFFFULL,
             48, 32, 16, 0
         },
         
@@ -1538,7 +1508,5 @@ namespace Ogre {
     /** @} */
 
 }
-
-#include "OgreHeaderSuffix.h"
 
 #endif

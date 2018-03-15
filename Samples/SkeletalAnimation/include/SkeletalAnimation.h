@@ -201,7 +201,6 @@ protected:
         SceneNode* ln = mSceneMgr->getRootSceneNode()->createChildSceneNode(pos);
         ln->attachObject(l);
         l->setType(Light::LT_SPOTLIGHT);
-        l->setDirection(Vector3::NEGATIVE_UNIT_Z);
         ln->setDirection(-pos);
         l->setDiffuseColour(0.0, 0.0, 0.5);
         bbs->createBillboard(pos)->setColour(l->getDiffuseColour());
@@ -210,7 +209,6 @@ protected:
         // add a green spotlight.
         l = mSceneMgr->createLight();
         l->setType(Light::LT_SPOTLIGHT);
-        l->setDirection(Vector3::NEGATIVE_UNIT_Z);
         pos = Vector3(0, 150, -100);
         ln = mSceneMgr->getRootSceneNode()->createChildSceneNode(pos);
         ln->attachObject(l);
@@ -229,8 +227,9 @@ protected:
         mSceneMgr->getRootSceneNode()->attachObject(floor);
 
         // set camera initial transform and speed
-        mCameraNode->setPosition(100, 20, 0);
-        mCameraNode->lookAt(Vector3(0, 10, 0), Node::TS_PARENT);
+        mCameraMan->setStyle(CS_ORBIT);
+        mTrayMgr->showCursor();
+        mCameraMan->setYawPitchDist(Degree(0), Degree(25), 100);
         mCameraMan->setTopSpeed(50);
 
         setupModels();
@@ -243,6 +242,12 @@ protected:
         SceneNode* sn = NULL;
         Entity* ent = NULL;
         AnimationState* as = NULL;
+
+        // make sure we can get the buffers for bbox calculations
+        MeshManager::getSingleton().load("jaiqua.mesh",
+                                         ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+                                         HardwareBuffer::HBU_DYNAMIC_WRITE_ONLY,
+                                         HardwareBuffer::HBU_DYNAMIC_WRITE_ONLY, true, true);
 
         for (int i = 0; i < NUM_MODELS; i++)
         {

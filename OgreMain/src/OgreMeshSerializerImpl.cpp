@@ -29,16 +29,8 @@ THE SOFTWARE.
 
 #include "OgreMeshSerializerImpl.h"
 #include "OgreMeshFileFormat.h"
-#include "OgreMeshSerializer.h"
-#include "OgreMesh.h"
-#include "OgreSubMesh.h"
-#include "OgreBitwise.h"
-#include "OgreException.h"
-#include "OgreLogManager.h"
-#include "OgreHardwareBufferManager.h"
 #include "OgreAnimation.h"
 #include "OgreAnimationTrack.h"
-#include "OgreRoot.h"
 #include "OgreLodStrategyManager.h"
 #include "OgreDistanceLodStrategy.h"
 
@@ -782,7 +774,7 @@ namespace Ogre {
 
         if (vType == VET_COLOUR)
         {
-            LogManager::getSingleton().stream()
+            LogManager::getSingleton().stream(LML_WARNING)
                 << "Warning: VET_COLOUR element type is deprecated, you should use "
                 << "one of the more specific types to indicate the byte order. "
                 << "Use OgreMeshUpgrade on " << pMesh->getName() << " as soon as possible. ";
@@ -2393,11 +2385,11 @@ namespace Ogre {
         writeFloats(&timePos, 1);
         pushInnerChunk(mStream);
         // pose references
-        VertexPoseKeyFrame::ConstPoseRefIterator poseRefIt =
-            kf->getPoseReferenceIterator();
-        while (poseRefIt.hasMoreElements())
+        VertexPoseKeyFrame::PoseRefList::const_iterator poseRefIt =
+            kf->getPoseReferences().begin();
+        for (;poseRefIt != kf->getPoseReferences().end(); ++poseRefIt)
         {
-            writePoseKeyframePoseRef(poseRefIt.getNext());
+            writePoseKeyframePoseRef(*poseRefIt);
         }
         popInnerChunk(mStream);
     }

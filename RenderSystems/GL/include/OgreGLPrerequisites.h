@@ -44,8 +44,8 @@ namespace Ogre {
     class GLRenderBuffer;
     class GLDepthBuffer;
 
-    typedef SharedPtr<GLGpuProgram> GLGpuProgramPtr;
-    typedef SharedPtr<GLTexture> GLTexturePtr;
+    typedef shared_ptr<GLGpuProgram> GLGpuProgramPtr;
+    typedef shared_ptr<GLTexture> GLTexturePtr;
 }
 
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
@@ -65,6 +65,26 @@ namespace Ogre {
 #elif OGRE_PLATFORM == OGRE_PLATFORM_APPLE
 #   include <GL/glew.h>
 #endif
+
+namespace Ogre {
+    inline const char* glErrorToString(GLenum glErr) {
+        switch(glErr)
+        {
+            case GL_INVALID_ENUM:
+                return "GL_INVALID_ENUM";
+            case GL_INVALID_VALUE:
+                return "GL_INVALID_VALUE";
+            case GL_INVALID_OPERATION:
+                return "GL_INVALID_OPERATION";
+            case GL_INVALID_FRAMEBUFFER_OPERATION:
+                return "GL_INVALID_FRAMEBUFFER_OPERATION";
+            case GL_OUT_OF_MEMORY:
+                return "GL_OUT_OF_MEMORY";
+            default:
+                return "";
+        }
+    }
+}
 
 /// Lots of generated code in here which triggers the new VC CRT security warnings
 #if !defined( _CRT_SECURE_NO_DEPRECATE )

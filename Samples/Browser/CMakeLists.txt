@@ -10,82 +10,36 @@
 # Configure Browser demo build
 
 set (HEADER_FILES
-	include/SampleBrowser.h
+	${OGRE_SOURCE_DIR}/Samples/Browser/include/SampleBrowser.h
 	${OGRE_SOURCE_DIR}/Samples/Common/include/Sample.h
 	${OGRE_SOURCE_DIR}/Samples/Common/include/SampleContext.h
 	${OGRE_SOURCE_DIR}/Samples/Common/include/SamplePlugin.h
 	${OGRE_SOURCE_DIR}/Samples/Common/include/SdkSample.h
 )
 
-set(SOURCE_FILES src/SampleBrowser.cpp)
+set(SOURCE_FILES ${OGRE_SOURCE_DIR}/Samples/Browser/src/SampleBrowser.cpp)
 
 # Get the list of configured samples
 get_property(OGRE_SAMPLES_LIST GLOBAL PROPERTY "OGRE_SAMPLES_LIST")
 
 if (APPLE_IOS)
   set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/SampleBrowser.cpp PROPERTIES COMPILE_FLAGS "-x objective-c++")
-
-  if(OGRE_BUILD_RENDERSYSTEM_GLES AND NOT OGRE_BUILD_RENDERSYSTEM_GLES2)
-    list(REMOVE_ITEM OGRE_SAMPLES_LIST Sample_BSP Sample_Compositor Sample_CelShading Sample_CubeMapping Sample_Dot3Bump Sample_Fresnel Sample_Instancing Sample_Lighting Sample_ShaderSystem Sample_ShaderSystemTexturedFog Sample_ShaderSystemMultiLight Sample_VolumeTex Sample_Water)
-  endif()
-
-  if(NOT OGRE_BUILD_COMPONENT_TERRAIN AND NOT OGRE_SDK_BUILD)
-    list(REMOVE_ITEM OGRE_SAMPLES_LIST Sample_Terrain)
-    list(REMOVE_ITEM OGRE_SAMPLES_LIST Sample_EndlessWorld)
-  endif()
-
-  if(NOT OGRE_BUILD_COMPONENT_RTSHADERSYSTEM AND NOT OGRE_SDK_BUILD)
-    list(REMOVE_ITEM OGRE_SAMPLES_LIST Sample_ShaderSystem)
-    list(REMOVE_ITEM OGRE_SAMPLES_LIST Sample_ShaderSystemMultiLight)
-    list(REMOVE_ITEM OGRE_SAMPLES_LIST Sample_ShaderSystemTexturedFog)
-  endif()
 endif ()
 
 if (APPLE AND APPLE_IOS)
   set(HEADER_FILES ${HEADER_FILES}
-    include/SampleBrowser_iOS.h
-  )
-elseif (OGRE_BUILD_PLATFORM_NACL)
-  set(HEADER_FILES ${HEADER_FILES}
-    include/SampleBrowser_NaCl.h
+    ${OGRE_SOURCE_DIR}/Samples/Browser/include/SampleBrowser_iOS.h
   )
 elseif (APPLE)
   set(HEADER_FILES ${HEADER_FILES}
-    include/SampleBrowser_OSX.h
 	${OGRE_SOURCE_DIR}/Samples/Common/misc/SampleBrowser_OSX.icns
   )
 elseif (ANDROID)
   set(HEADER_FILES ${HEADER_FILES}
-    include/SampleBrowser_Android.h)
+    ${OGRE_SOURCE_DIR}/Samples/Browser/include/SampleBrowser_Android.h)
 endif (APPLE AND APPLE_IOS)
 
-
-if (OGRE_STATIC)
-  # Find all samples headers, and copy them to a single include folder
-  # We do this instead of including every sample in the include_directories directive, 
-  # because this creates a list that is too long for the MSVC command line sometimes.
-  file (GLOB SAMPLES_HEADERS ${OGRE_SOURCE_DIR}/Samples/*/include/*.h)
-  foreach(SAMPLE_HEADER_FULLPATH ${SAMPLES_HEADERS})
-	get_filename_component(SAMPLE_HEADER_NAME ${SAMPLE_HEADER_FULLPATH} NAME)
-	configure_file(${SAMPLE_HEADER_FULLPATH} ${OGRE_BINARY_DIR}/Samples/include/${SAMPLE_HEADER_NAME} COPYONLY)
-  endforeach(SAMPLE_HEADER_FULLPATH)
-  include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-	${OGRE_BINARY_DIR}/Samples/include)
-
-  # Fix for static build with MinGW
-  if (OGRE_BUILD_RENDERSYSTEM_D3D9 AND OGRE_STATIC)
-    include_directories(${DirectX9_INCLUDE_DIR})
-  endif() 
-  
-	ogre_add_component_include_dir(Paging)
-	ogre_add_component_include_dir(Terrain)
-	ogre_add_component_include_dir(Volume)
-	ogre_add_component_include_dir(MeshLodGenerator)
-else()
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)  
-endif()
-
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)  
 
 if (WINDOWS_STORE OR WINDOWS_PHONE)
 
@@ -169,51 +123,6 @@ if (WINDOWS_STORE OR WINDOWS_PHONE)
 
 endif()
 
-
-if(ANDROID)
-    include(AndroidMacros)
-    
-    SET(ANDROID_MOD_NAME "OgreSampleBrowser")
-    SET(JNI_PATH "${CMAKE_SOURCE_DIR}/Samples/Browser/src")
-    SET(JNI_SRC_FILES "SampleBrowser.cpp gestureDetector.cpp")
-    
-    SET(NDKOUT "${CMAKE_BINARY_DIR}/SampleBrowserNDK")
-    
-    # Force export ANativeActivity_onCreate()  
-    # Refer to: https://github.com/android-ndk/ndk/issues/381.
-    # Only needed when building with NDK-R14 and older
-    SET(OGRE_ANDROID_LDFLAGS "-u ANativeActivity_onCreate")
-
-    SET(PKG_NAME "org.ogre.browser")
-    # Set this variable to false if no java code will be present (google android:hasCode for more info)
-    SET(HAS_CODE "false")
-    
-    SET(MAIN_ACTIVITY "android.app.NativeActivity")
-    SET(HEADERS "")
-    SET(SAMPLE_LDLIBS "android_native_app_glue")
-    
-    add_static_libs("${OGRE_BINARY_DIR}/lib" "Sample_Water" "Sample_Ocean" "Sample_NewInstancing" "Sample_ShaderSystem" "Sample_DeferredShading" "Sample_EndlessWorld" "Sample_VolumeCSG" "Sample_VolumeTerrain" "Sample_Terrain" "Sample_ShaderSystemMultiLight" "Sample_ShaderSystemTexturedFog")
-	add_static_libs("${OGRE_BINARY_DIR}/lib" "Sample_FacialAnimation" "Sample_Fresnel" "Sample_Grass" "Sample_ParticleFX" "Sample_MeshLod" "Sample_SkyBox" "Sample_SkyPlane" "Sample_SkyDome" "Sample_Smoke")
-	add_static_libs("${OGRE_BINARY_DIR}/lib" "Sample_CameraTrack" "Sample_CelShading" "Sample_Character" "Sample_Compositor" "Sample_Lighting" "Sample_BezierPatch" "Sample_CubeMapping" "Sample_DynTex")
-	add_static_libs("${OGRE_BINARY_DIR}/lib" "Sample_HLMS" "Sample_VolumeTex")
-
-    if(OGRE_BUILD_TESTS)
-        set(OGRE_ANDROID_CFLAGS -DSAMPLES_INCLUDE_PLAYPEN)
-        set(OGRE_ANDROID_INCLUDES ${OGRE_SOURCE_DIR}/Tests/VisualTests/PlayPen/include)
-        add_static_libs("${OGRE_BINARY_DIR}/lib" PlayPenTests)
-    endif()
-
-	copy_assets_to_android_proj()
-    
-    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp "int x = 0;")
-    ogre_add_library_to_folder(Samples SampleBrowserDummy SHARED ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp)
-    target_link_libraries(SampleBrowserDummy ${SAMPLE_LIBRARIES})
-    add_dependencies(SampleBrowserDummy ${OGRE_SAMPLES_LIST})
-    
-    create_android_proj(SampleBrowserDummy)
-
-else()
-
 if (OGRE_BUILD_TESTS)
 	add_definitions(-DSAMPLES_INCLUDE_PLAYPEN)
 	include_directories(${OGRE_SOURCE_DIR}/Tests/PlayPen/include
@@ -225,14 +134,31 @@ if (OGRE_BUILD_RENDERSYSTEM_D3D9 AND OGRE_STATIC)
     link_directories(${DirectX9_LIBRARY_DIR})
 endif()
 
-ogre_add_executable(SampleBrowser WIN32 ${HEADER_FILES} ${SOURCE_FILES} ${RESOURCE_FILES})
+if (ANDROID)
+    include(AndroidMacros)
+
+    add_ndk_cpufeatures_library()
+    add_ndk_native_app_glue_library()
+
+    include_directories(${OGRE_SOURCE_DIR}/RenderSystems/GLSupport/include)
+    set(SOURCE_FILES ${SOURCE_FILES} ${OGRE_SOURCE_DIR}/Samples/Browser/src/gestureDetector.cpp)
+
+    add_library(SampleBrowser SHARED ${HEADER_FILES} ${SOURCE_FILES} ${RESOURCE_FILES})
+else()
+    add_executable(SampleBrowser WIN32 ${HEADER_FILES} ${SOURCE_FILES} ${RESOURCE_FILES})
+endif()
 
 # Fix for static build with MinGW
 if (OGRE_BUILD_RENDERSYSTEM_D3D9 AND OGRE_STATIC)
    target_link_libraries(SampleBrowser ${DirectX9_LIBRARIES})
 endif()
 
-target_link_libraries(SampleBrowser ${OGRE_LIBRARIES} ${OGRE_PLUGIN_LIBRARIES} ${SDL2_LIBRARY} ${SAMPLE_LIBRARIES} OgreBites)
+target_link_libraries(SampleBrowser OgreMain ${OGRE_PLUGIN_LIBRARIES} ${SAMPLE_LIBRARIES} OgreBites)
+
+if(ANDROID)
+    target_link_libraries(SampleBrowser native_app_glue cpufeatures android c m dl z log EGL GLESv2 "-u ANativeActivity_onCreate")
+    set_target_properties(SampleBrowser PROPERTIES LINK_FLAGS -s) # strip symbols
+endif()
 
 # Add samples as dependencies
 add_dependencies(SampleBrowser ${OGRE_SAMPLES_LIST})
@@ -252,7 +178,7 @@ endif ()
 ogre_config_common(SampleBrowser)
 
 # append _d for debug builds
-if (NOT (APPLE OR WINDOWS_STORE OR WINDOWS_PHONE))
+if (WIN32 AND NOT (WINDOWS_STORE OR WINDOWS_PHONE))
 	set_property(TARGET SampleBrowser APPEND PROPERTY DEBUG_POSTFIX "_d")
 endif ()
 
@@ -302,7 +228,7 @@ if (APPLE)
         ${OGRE_SOURCE_DIR}/RenderSystems/GL/include/OSX
         )
 
-	target_link_libraries(SampleBrowser ${OPENGL_LIBRARIES} ${CoreVideo_LIBRARIES})
+	target_link_libraries(SampleBrowser ${OPENGL_gl_LIBRARY} ${CoreVideo_LIBRARIES})
 
    set_target_properties(SampleBrowser PROPERTIES
         LINK_FLAGS "-framework IOKit -framework Cocoa -framework Carbon -framework CoreVideo -framework ApplicationServices")
@@ -362,12 +288,16 @@ if (APPLE)
         OgreRTShaderSystem
         OgreTerrain
         OgreVolume
+        OgreHLMS
+        OgreMeshLodGenerator
         Plugin_BSPSceneManager
         Plugin_CgProgramManager
         Plugin_OctreeSceneManager
         Plugin_OctreeZone
         Plugin_ParticleFX
         Plugin_PCZSceneManager
+        Codec_STBI
+        Codec_FreeImage
         RenderSystem_GL
         RenderSystem_GL3Plus
     )
@@ -396,6 +326,26 @@ if (APPLE)
 
 endif (APPLE)
 
+if (ANDROID)
+    SET(ANDROID_MOD_NAME "OgreSampleBrowser")
+    SET(NDKOUT "${CMAKE_BINARY_DIR}/SampleBrowserNDK")
+    SET(PKG_NAME "org.ogre.browser")
+    SET(HAS_CODE "false")
+    SET(MAIN_ACTIVITY "android.app.NativeActivity")
+    SET(HEADERS "")
+    SET(SAMPLE_LDLIBS "")
+
+    copy_assets_to_android_proj()
+
+    file(MAKE_DIRECTORY "${NDKOUT}/libs")
+    file(MAKE_DIRECTORY "${NDKOUT}/libs/${ANDROID_NDK_ABI_NAME}")
+    set_target_properties(SampleBrowser PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${NDKOUT}/libs/${ANDROID_NDK_ABI_NAME}")
+    set_target_properties(SampleBrowser PROPERTIES OUTPUT_NAME "OgreSampleBrowser")
+
+    create_android_proj(SampleBrowser)
+    # this whole part should be simplified more
+endif(ANDROID)
+
 if (OGRE_INSTALL_SAMPLES)
 	ogre_install_target(SampleBrowser "" FALSE)
 	if (OGRE_INSTALL_PDB)
@@ -408,4 +358,3 @@ if (OGRE_INSTALL_SAMPLES)
 			)
 	endif ()
 endif ()
-endif(ANDROID)

@@ -169,33 +169,15 @@ namespace Ogre {
                 HBL_WRITE_ONLY
 
             };
-
-            /// Device load options
-            /// The following enum is used to controls how data is loaded to devices in a multi device environment
-            /// This enum only works with the Direct3D 9 render system (5/2013).
-            enum UploadOptions 
-            {
-                /* Normal mode, 
-                    Data is automatically updated in all devices 
-                */
-                HBU_DEFAULT    = 0x0000,
-                /* Lazy load,
-                    Data is updated in the currently active device. Any other device will only be updated once 
-                    buffer is requested for rendering.
-                */
-                HBU_ON_DEMAND = 0x0001
-            };
-
         protected:
             size_t mSizeInBytes;
             Usage mUsage;
             bool mIsLocked;
             size_t mLockStart;
             size_t mLockSize;
-            UploadOptions mLockUploadOption;
             bool mSystemMemory;
             bool mUseShadowBuffer;
-            HardwareBuffer* mShadowBuffer;
+            std::unique_ptr<HardwareBuffer> mShadowBuffer;
             bool mShadowUpdated;
             bool mSuppressHardwareUpdate;
             
@@ -208,7 +190,7 @@ namespace Ogre {
             /// Constructor, to be called by HardwareBufferManager only
             HardwareBuffer(Usage usage, bool systemMemory, bool useShadowBuffer) 
                 : mSizeInBytes(0), mUsage(usage), mIsLocked(false), mLockStart(0), mLockSize(0), mSystemMemory(systemMemory),
-                mUseShadowBuffer(useShadowBuffer), mShadowBuffer(NULL), mShadowUpdated(false), 
+                mUseShadowBuffer(useShadowBuffer), mShadowUpdated(false),
                 mSuppressHardwareUpdate(false) 
             {
                 // If use shadow buffer, upgrade to WRITE_ONLY on hardware side
@@ -229,7 +211,7 @@ namespace Ogre {
             @param uploadOpt
             @return Pointer to the locked memory
             */
-            virtual void* lock(size_t offset, size_t length, LockOptions options, UploadOptions uploadOpt = HBU_DEFAULT)
+            virtual void* lock(size_t offset, size_t length, LockOptions options)
             {
                 assert(!isLocked() && "Cannot lock this buffer, it is already locked!");
 
@@ -249,7 +231,7 @@ namespace Ogre {
                         mShadowUpdated = true;
                     }
 
-                    ret = mShadowBuffer->lock(offset, length, options, uploadOpt);
+                    ret = mShadowBuffer->lock(offset, length, options);
                 }
                 else
                 {
@@ -259,14 +241,13 @@ namespace Ogre {
                 }
                 mLockStart = offset;
                 mLockSize = length;
-                mLockUploadOption = uploadOpt;
                 return ret;
             }
 
             /// @overload
-            void* lock(LockOptions options, UploadOptions uploadOpt = HBU_DEFAULT)
+            void* lock(LockOptions options)
             {
-                return this->lock(0, mSizeInBytes, options, uploadOpt);
+                return this->lock(0, mSizeInBytes, options);
             }
             /** Releases the lock on this buffer. 
             @remarks 
@@ -356,12 +337,12 @@ namespace Ogre {
                     // Do this manually to avoid locking problems
                     const void *srcData = mShadowBuffer->lockImpl(
                         mLockStart, mLockSize, HBL_READ_ONLY);
-                    // Lock with discard if the whole buffer was locked, otherwise normal
+                    // Lock with discard if the whole buffer was locked, otherwise w/o
                     LockOptions lockOpt;
                     if (mLockStart == 0 && mLockSize == mSizeInBytes)
                         lockOpt = HBL_DISCARD;
                     else
-                        lockOpt = HBL_NORMAL;
+                        lockOpt = HBL_WRITE_ONLY;
                     
                     void *destData = this->lockImpl(
                         mLockStart, mLockSize, lockOpt);

@@ -28,8 +28,6 @@ THE SOFTWARE.
 #include "OgreStableHeaders.h"
 #include "OgreCompositionTargetPass.h"
 #include "OgreCompositionPass.h"
-#include "OgreMaterialManager.h"
-#include "OgreRoot.h"
 
 namespace Ogre {
 
@@ -179,10 +177,10 @@ bool CompositionTargetPass::_isSupported(void)
 {
     // A target pass is supported if all passes are supported
 
-    PassIterator passi = getPassIterator();
-    while (passi.hasMoreElements())
+    Passes::const_iterator passi = mPasses.begin();
+    for (;passi != mPasses.end(); ++passi)
     {
-        CompositionPass* pass = passi.getNext();
+        CompositionPass* pass = *passi;
         if (!pass->_isSupported())
         {
             return false;

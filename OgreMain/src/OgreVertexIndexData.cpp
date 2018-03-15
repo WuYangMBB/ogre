@@ -27,11 +27,7 @@ THE SOFTWARE.
 */
 #include "OgreStableHeaders.h"
 #include "OgreVertexIndexData.h"
-#include "OgreHardwareBufferManager.h"
 #include "OgreHardwareVertexBuffer.h"
-#include "OgreRoot.h"
-#include "OgreRenderSystem.h" 
-#include "OgreException.h"
 
 namespace Ogre {
 
@@ -351,6 +347,9 @@ namespace Ogre {
             oldBufferLocks.resize(count);
             oldBufferVertexSizes.resize(count);
         }
+
+        bool useShadowBuffer = false;
+
         // Lock all the old buffers for reading
         for (itBinding = oldBindingMap.begin(); itBinding != oldBindingMap.end(); ++itBinding)
         {
@@ -361,6 +360,8 @@ namespace Ogre {
             oldBufferLocks[itBinding->first] =
                 itBinding->second->lock(
                     HardwareBuffer::HBL_READ_ONLY);
+
+            useShadowBuffer |= itBinding->second->hasShadowBuffer();
         }
         
         // Create new buffers and lock all for writing
@@ -373,7 +374,7 @@ namespace Ogre {
                 pManager->createVertexBuffer(
                     vertexSize,
                     vertexCount, 
-                    bufferUsages[buf]);
+                    bufferUsages[buf], useShadowBuffer);
             newBinding->setBinding(buf, vbuf);
 
             newBufferVertexSizes.push_back(vertexSize);

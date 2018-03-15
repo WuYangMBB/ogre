@@ -28,7 +28,6 @@ THE SOFTWARE.
 
 #include "OgreStableHeaders.h"
 #include "OgreRenderToVertexBuffer.h"
-#include "OgreMaterialManager.h"
 
 namespace Ogre {
     //-----------------------------------------------------------------------
@@ -39,13 +38,9 @@ namespace Ogre {
         mSourceRenderable(0),
         mMaxVertexCount(1000)
     {
-        mVertexData = OGRE_NEW VertexData;
+        mVertexData.reset(new VertexData);
     }
-    //-----------------------------------------------------------------------
-    RenderToVertexBuffer::~RenderToVertexBuffer()
-    {
-        OGRE_DELETE mVertexData;
-    }
+    RenderToVertexBuffer::~RenderToVertexBuffer() = default; // ensure unique_ptr destructors are in cpp
     //-----------------------------------------------------------------------
     VertexDeclaration* RenderToVertexBuffer::getVertexDeclaration()
     {

@@ -849,10 +849,7 @@ namespace Ogre
             ID_PASS_OP,
             ID_TWO_SIDED,
             ID_READ_BACK_AS_TEXTURE,
-#ifdef RTSHADER_SYSTEM_BUILD_CORE_SHADERS
-        ID_RT_SHADER_SYSTEM,
-#endif
-        /// Suport for shader model 5.0
+        // Suport for shader model 5.0
         // More program IDs
         ID_TESSELLATION_HULL_PROGRAM,
         ID_TESSELLATION_DOMAIN_PROGRAM,

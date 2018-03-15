@@ -13,207 +13,70 @@
 
 PROJECT(OgreMain)
 
-include(PrecompiledHeader)
-
 # define header and source files for the library
 file(GLOB HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
 list(APPEND HEADER_FILES
-    ${OGRE_BINARY_DIR}/include/OgreBuildSettings.h
-    ${CMAKE_BINARY_DIR}/include/OgreExports.h
-    src/OgreImageResampler.h
-    src/OgrePixelConversions.h
-    src/OgreSIMDHelper.h)
+    ${CMAKE_BINARY_DIR}/include/OgreBuildSettings.h
+    ${CMAKE_BINARY_DIR}/include/OgreExports.h)
 
 file(GLOB SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
-# silence deprecation warning for internal call
-if(UNIX)
-  set_source_files_properties(src/OgreResource.cpp PROPERTIES COMPILE_FLAGS "-Wno-deprecated-declarations")
-endif()
-
 # Remove optional header files
-list(REMOVE_ITEM HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/include/OgreFreeImageCodec.h"
+list(REMOVE_ITEM HEADER_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/include/OgreDDSCodec.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/OgrePVRTCCodec.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/OgreETCCodec.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/OgreZip.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/OgreSTBICodec.h"
 )
 
 # Remove optional source files
-list(REMOVE_ITEM SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreFreeImageCodec.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreConfigDialogNoOp.cpp"
+list(REMOVE_ITEM SOURCE_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreFileSystemLayerNoOp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreDDSCodec.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/OgrePVRTCCodec.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreETCCodec.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreZip.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/OgrePOSIXTimer.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreSearchOps.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreSTBICodec.cpp"
 )
 
-# Add threading (backport from 2.X)
-list(APPEND HEADER_FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/Threading/OgreThreads.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/Threading/OgreBarrier.h
-	${CMAKE_CURRENT_SOURCE_DIR}/include/Threading/OgreLightweightMutex.h)
-	
-if(WIN32 AND NOT ANDROID)
-	list(APPEND SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/Threading/OgreBarrierWin.cpp
-		${CMAKE_CURRENT_SOURCE_DIR}/src/Threading/OgreThreadsWin.cpp
-		${CMAKE_CURRENT_SOURCE_DIR}/src/Threading/OgreLightweightMutexWin.cpp)
-else()
-	list(APPEND SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/Threading/OgreBarrierPThreads.cpp
-		${CMAKE_CURRENT_SOURCE_DIR}/src/Threading/OgreLightweightMutexPThreads.cpp
-		${CMAKE_CURRENT_SOURCE_DIR}/src/Threading/OgreThreadsPThreads.cpp)
-endif()
-
 # Add platform specific files
-if (OGRE_BUILD_PLATFORM_NACL)
-  include_directories("include/NaCl")
-  file(GLOB PLATFORM_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/NaCl/*.h")
-  file(GLOB PLATFORM_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/NaCl/*.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/OgrePOSIXTimer.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreFileSystemLayerNoOp.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreConfigDialogNoOp.cpp")
-
-  set(PLATFORM_LIBS nosys)
-  set(PLATFORM_HEADER_INSTALL "NaCl")
-elseif (EMSCRIPTEN)
-  list(REMOVE_ITEM HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/include/OgrePOSIXTimerImp.h")
-
-  include_directories(include/Emscripten)
-
-  file(GLOB PLATFORM_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/Emscripten/*.h)
-  file(GLOB PLATFORM_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/Emscripten/*.cpp"
-      "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreFileSystemLayerNoOp.cpp"
-      "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreConfigDialogNoOp.cpp")
-
-  set(PLATFORM_HEADER_INSTALL "Emscripten")
+if (EMSCRIPTEN)
+  set(PLATFORM_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreFileSystemLayerNoOp.cpp")
 elseif (WIN32)
-  list(REMOVE_ITEM HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/include/OgrePOSIXTimerImp.h")
-
-  if (WINDOWS_STORE OR WINDOWS_PHONE)
-    include_directories("include/WIN32")
-    set(PLATFORM_HEADERS
-      include/WIN32/OgreTimerImp.h
-    )
-    set(PLATFORM_SOURCE_FILES
-      src/WIN32/OgreOptimisedUtilDirectXMath.cpp
-      src/OgreConfigDialogNoOp.cpp
-      src/WIN32/OgreFileSystemLayer.cpp
-      src/WIN32/OgreTimer.cpp
-    )  
-
-    set(PLATFORM_HEADER_INSTALL "WIN32")
-  else ()
-    include_directories("include/WIN32")
-    set(PLATFORM_HEADERS
-      include/WIN32/OgreErrorDialogImp.h
-      include/WIN32/OgreTimerImp.h
-      include/WIN32/OgreMinGWSupport.h
-      include/WIN32/OgreComPtr.h
-    )
-    
-    list(REMOVE_ITEM SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreErrorDialogNoOp.cpp")
-    set(PLATFORM_SOURCE_FILES
-      src/WIN32/OgreOptimisedUtilDirectXMath.cpp
-      src/WIN32/OgreConfigDialog.cpp
-      src/WIN32/OgreErrorDialog.cpp
-      src/WIN32/OgreFileSystemLayer.cpp
-      src/WIN32/OgreTimer.cpp
-      src/WIN32/resource.h
-    )  
-    set(RESOURCE_FILES
-      src/WIN32/resource.h
-      src/WIN32/OgreWin32Resources.rc
-    )
-    source_group(Resources FILES ${RESOURCE_FILES})
-    set(PLATFORM_HEADER_INSTALL "WIN32")
-
-    if (MINGW)
-      # Older CMake versions do not know how to deal with resource files on MinGW.
-      # Newer ones do, but pass along invalid command options to windres.
-      # This is a manual fix for the moment.
-      if (NOT CMAKE_RC_COMPILER)
-        message(SEND_ERROR "Could not find MinGW resource compiler. Please specify path in CMAKE_RC_COMPILER.")
-      endif ()
-      add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/OgreWin32Resources.rc.obj
-        COMMAND ${CMAKE_RC_COMPILER} -I${CMAKE_CURRENT_SOURCE_DIR}/src/WIN32 
-                                     -i${CMAKE_CURRENT_SOURCE_DIR}/src/WIN32/OgreWin32Resources.rc
-                                     -o${CMAKE_CURRENT_BINARY_DIR}/OgreWin32Resources.rc.obj
-        DEPENDS ${RESOURCE_FILES})
-      list(APPEND PLATFORM_SOURCE_FILES ${CMAKE_CURRENT_BINARY_DIR}/OgreWin32Resources.rc.obj)
-    else ()
-      list(APPEND PLATFORM_SOURCE_FILES src/WIN32/OgreWin32Resources.rc)
-    endif ()
-  endif ()
-
+  file(GLOB PLATFORM_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/WIN32/*.cpp")
 elseif (APPLE)
   if (APPLE_IOS)
-    include_directories("include/iOS")
-    file(GLOB PLATFORM_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/iOS/*.h")
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/iOS")
     file(GLOB PLATFORM_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/iOS/*.cpp"
-      "${CMAKE_CURRENT_SOURCE_DIR}/src/iOS/*.mm"
-      "${CMAKE_CURRENT_SOURCE_DIR}/src/OgrePOSIXTimer.cpp"
-      "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreConfigDialogNoOp.cpp")
+      "${CMAKE_CURRENT_SOURCE_DIR}/src/iOS/*.mm")
 
     set(PLATFORM_LIBS "")
-    set(PLATFORM_HEADER_INSTALL "iOS")
   else ()
-    include_directories("include/OSX")
-    
-    file(GLOB PLATFORM_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/OSX/*.h")
-    
-    list(REMOVE_ITEM SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreErrorDialogNoOp.cpp")
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/OSX")
     file(GLOB PLATFORM_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/OSX/*.cpp"
       "${CMAKE_CURRENT_SOURCE_DIR}/src/OSX/*.mm"
-      "${CMAKE_CURRENT_SOURCE_DIR}/src/OgrePOSIXTimer.cpp"
-      include/OSX/ogrelogo.png
     )
-
-    set(RESOURCE_FILES
-	  include/OSX/ogrelogo.png
-    )
-    source_group(Resources FILES ${RESOURCE_FILES})
-
     set(PLATFORM_LIBS ${Carbon_LIBRARY_FWK} ${Cocoa_LIBRARY_FWK})
-    set(PLATFORM_HEADER_INSTALL "OSX")
   endif ()
 elseif(ANDROID)
   # required by OgrePlatformInformation.cpp
   include_directories(${ANDROID_NDK}/sources/android/cpufeatures)
 
-  file(GLOB PLATFORM_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/Android/*.h")
-  file(GLOB PLATFORM_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/Android/*.cpp"
-      "${CMAKE_CURRENT_SOURCE_DIR}/src/OgrePOSIXTimer.cpp"
-      "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreConfigDialogNoOp.cpp")
-
-  set(PLATFORM_HEADER_INSTALL "Android")
+  file(GLOB PLATFORM_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/Android/*.cpp")
 elseif (UNIX)
-  include_directories(include/GLX ${X11_INCLUDE_DIR})
+  file(GLOB PLATFORM_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/GLX/*.cpp")
 
-  file(GLOB PLATFORM_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/GLX/*.h")
-  file(GLOB PLATFORM_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/GLX/*.cpp"
-      "${CMAKE_CURRENT_SOURCE_DIR}/src/OgrePOSIXTimer.cpp")
-
-  set(PLATFORM_LIBS ${X11_LIBRARIES} ${X11_Xt_LIB} ${XAW_LIBRARY} pthread)
-  set(PLATFORM_HEADER_INSTALL "GLX")
-  # some platforms require explicit linking to libdl, see if it's available
-  find_library(DL_LIBRARY NAMES dl dlsym)
-  mark_as_advanced(DL_LIBRARY)
-  if (DL_LIBRARY)
-    list(APPEND PLATFORM_LIBS dl)
-  endif ()
+  set(PLATFORM_LIBS pthread)
 endif()
 
 if(NOT WIN32)
     list(APPEND PLATFORM_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreSearchOps.cpp")
 endif()
 
+include_directories("${ZLIB_INCLUDE_DIRS}" "${ZZip_INCLUDE_DIRS}")
 # Configure threading files
 file(GLOB THREAD_HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/include/Threading/*.h")
-include_directories("include/Threading")
+include_directories("include/Threading" "src/")
 
 if (OGRE_THREAD_PROVIDER EQUAL 0)
 	list(APPEND THREAD_HEADER_FILES
@@ -224,6 +87,9 @@ if (OGRE_THREAD_PROVIDER EQUAL 0)
 		src/Threading/OgreDefaultWorkQueueStandard.cpp
 	)
 elseif (OGRE_THREAD_PROVIDER EQUAL 1)
+  include_directories(${Boost_INCLUDE_DIRS})
+  link_directories(${Boost_LIBRARY_DIRS})
+
 	list(APPEND THREAD_HEADER_FILES
 		include/Threading/OgreThreadDefinesBoost.h
 		include/Threading/OgreThreadHeadersBoost.h
@@ -263,36 +129,10 @@ endif ()
 
 list(APPEND HEADER_FILES ${THREAD_HEADER_FILES})
 
-# Add needed definitions and nedmalloc include dir
-if(NOT OGRE_CONFIG_ALLOCATOR EQUAL 1)
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/nedmalloc)
-endif()
-
 set(LIBRARIES ${PLATFORM_LIBS})
 
 if (OGRE_CONFIG_THREADS)
   list(APPEND LIBRARIES ${OGRE_THREAD_LIBRARIES})
-endif ()
-
-if (OGRE_CONFIG_ENABLE_FREEIMAGE)
-  add_definitions(-DFREEIMAGE_LIB)
-  list(APPEND HEADER_FILES include/OgreFreeImageCodec.h)
-  list(APPEND SOURCE_FILES src/OgreFreeImageCodec.cpp)
-  list(APPEND LIBRARIES    "${FreeImage_LIBRARIES}")
-endif()
-
-if (OGRE_CONFIG_ENABLE_STBI)
-  list(APPEND HEADER_FILES include/OgreSTBICodec.h)
-  list(APPEND SOURCE_FILES src/OgreSTBICodec.cpp)
-  
-  if(UNIX)
-    set_source_files_properties(src/OgreSTBICodec.cpp PROPERTIES COMPILE_FLAGS "-Wno-cast-qual -Wno-unused-function -Wno-shadow -Wno-missing-declarations")
-  endif()
-  
-  if(CMAKE_COMPILER_IS_GNUCXX)
-      # workaround gcc5 bug on Ubuntu 16.04 regarding __builtin_cpu_supports
-      list(APPEND LIBRARIES gcc)
-  endif()
 endif ()
 
 if (OGRE_CONFIG_ENABLE_DDS)
@@ -327,24 +167,15 @@ if (OGRE_CONFIG_ENABLE_ZIP)
   list(APPEND LIBRARIES "${ZLIB_LIBRARIES}")
 endif ()
 
-if (OGRE_CONFIG_ENABLE_GLES2_GLSL_OPTIMISER)
-  list(APPEND LIBRARIES "${GLSL_Optimizer_LIBRARIES}")
-endif ()
-
-if (OGRE_CONFIG_ENABLE_GLES2_CG_SUPPORT)
-  list(APPEND LIBRARIES "${HLSL2GLSL_LIBRARIES}")
-endif ()
-
 set (TARGET_LINK_FLAGS "")
 
 # setup OgreMain target
+
+get_native_precompiled_header(OgreMain)
+add_library(OgreMain ${OGRE_LIB_TYPE} ${OgreMain_pch} ${HEADER_FILES} ${SOURCE_FILES} ${PLATFORM_HEADERS} ${PLATFORM_SOURCE_FILES} ${THREAD_HEADER_FILES} ${THREAD_SOURCE_FILES})
+
 if (WINDOWS_STORE OR WINDOWS_PHONE)
-	# exclude OgreTimer.cpp from unity builds; causes problem
-	ogre_add_library(OgreMain ${OGRE_LIB_TYPE} ${PREC_HEADER} ${HEADER_FILES} ${SOURCE_FILES} ${PLATFORM_HEADERS} ${PLATFORM_SOURCE_FILES} ${THREAD_HEADER_FILES} ${THREAD_SOURCE_FILES} SEPARATE "src/WIN32/OgreTimer.cpp")
 	set_target_properties(OgreMain PROPERTIES VS_WINRT_COMPONENT "true")
-else ()
-	# exclude OgreAlignedAllocator.cpp from unity builds; causes problems on Linux
-	ogre_add_library(OgreMain ${OGRE_LIB_TYPE} ${PREC_HEADER} ${HEADER_FILES} ${SOURCE_FILES} ${PLATFORM_HEADERS} ${PLATFORM_SOURCE_FILES} ${THREAD_HEADER_FILES} ${THREAD_SOURCE_FILES} SEPARATE "src/OgreAlignedAllocator.cpp")
 endif ()
 
 generate_export_header(OgreMain 
@@ -352,6 +183,8 @@ generate_export_header(OgreMain
     NO_EXPORT_MACRO_NAME _OgrePrivate
     DEPRECATED_MACRO_NAME OGRE_DEPRECATED
     EXPORT_FILE_NAME ${CMAKE_BINARY_DIR}/include/OgreExports.h)
+
+target_include_directories(OgreMain PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${OGRE_BINARY_DIR}/include" ${PLATFORM_INCLUDE})
 
 # In visual studio 2010 - 64 bit we get this error: "LINK : fatal error LNK1210: exceeded internal ILK size limit; link with /INCREMENTAL:NO"
 if(WIN32 AND MSVC10 AND CMAKE_CL_64)
@@ -386,21 +219,10 @@ if (APPLE)
           COMMAND mkdir ARGS -p ${OGRE_BINARY_DIR}/lib/${OGRE_OSX_BUILD_CONFIGURATION}/Ogre.framework/Headers/Threading
           COMMAND ditto
           ${OGRE_SOURCE_DIR}/OgreMain/include/Threading/*.h ${OGRE_BINARY_DIR}/lib/${OGRE_OSX_BUILD_CONFIGURATION}/Ogre.framework/Headers/Threading
-          COMMAND mkdir ARGS -p ${OGRE_BINARY_DIR}/lib/${OGRE_OSX_BUILD_CONFIGURATION}/Ogre.framework/Headers/OSX
-          COMMAND ditto
-          ${OGRE_SOURCE_DIR}/OgreMain/include/OSX/*.h ${OGRE_BINARY_DIR}/lib/${OGRE_OSX_BUILD_CONFIGURATION}/Ogre.framework/Headers/OSX
           COMMAND cd ${OGRE_BINARY_DIR}/lib/${OGRE_OSX_BUILD_CONFIGURATION}/Ogre.framework/Headers
           )
 
       foreach(HEADER_PATH ${THREAD_HEADER_FILES})
-          get_filename_component(HEADER_FILE ${HEADER_PATH} NAME)
-          set(FWK_HEADER_PATH ${OGRE_BINARY_DIR}/lib/${OGRE_OSX_BUILD_CONFIGURATION}/Ogre.framework/Headers/${HEADER_FILE})
-          add_custom_command(TARGET OgreMain POST_BUILD
-              COMMAND rm -f ${FWK_HEADER_PATH}
-              )
-      endforeach()
-
-      foreach(HEADER_PATH ${PLATFORM_HEADERS})
           get_filename_component(HEADER_FILE ${HEADER_PATH} NAME)
           set(FWK_HEADER_PATH ${OGRE_BINARY_DIR}/lib/${OGRE_OSX_BUILD_CONFIGURATION}/Ogre.framework/Headers/${HEADER_FILE})
           add_custom_command(TARGET OgreMain POST_BUILD
@@ -417,17 +239,10 @@ if (APPLE)
     set_target_properties(OgreMain PROPERTIES	OUTPUT_NAME Ogre)
   endif()
 endif ()
-target_link_libraries(OgreMain ${LIBRARIES})
-if (MINGW)
-  # may need winsock htons functions for FreeImage
-  target_link_libraries(OgreMain ws2_32)
-endif ()
+target_link_libraries(OgreMain ${LIBRARIES} ${CMAKE_DL_LIBS})
 
 # specify a precompiled header to use
-use_precompiled_header(OgreMain 
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/OgreStableHeaders.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/OgrePrecompiledHeaders.cpp"
-)
+add_native_precompiled_header(OgreMain "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreStableHeaders.h")
 
 # install OgreMain
 ogre_config_lib(OgreMain TRUE)

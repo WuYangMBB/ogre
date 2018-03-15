@@ -69,11 +69,11 @@ namespace Ogre {
         /** Temporary preallocated frustum to set up a projection matrix in 
             calculateShadowMappingMatrix().
         */
-        Frustum* mTempFrustum;
+        std::unique_ptr<Frustum> mTempFrustum;
 
         /** Temporary preallocated camera to set up a light frustum for clipping in FocusedShadowCameraSetup::calculateB.
         */
-        Camera* mLightFrustumCamera;
+        std::unique_ptr<Camera> mLightFrustumCamera;
         mutable bool mLightFrustumCameraCalculated;
 
         /// Use tighter focus region?
@@ -166,7 +166,7 @@ namespace Ogre {
             Calculated uniform shadow camera (may be @c NULL).
         */
         void calculateShadowMappingMatrix(const SceneManager& sm, const Camera& cam, 
-            const Light& light, Matrix4 *out_view, 
+            const Light& light, Affine3 *out_view,
             Matrix4 *out_proj, Camera *out_cam) const;
 
         /** Calculates the intersection bodyB.
@@ -244,7 +244,7 @@ namespace Ogre {
         @param bodyLVS
             Intersection body LVS (relevant space in front of the camera).
         */
-        Vector3 getNearCameraPoint_ws(const Matrix4& viewMatrix, 
+        Vector3 getNearCameraPoint_ws(const Affine3& viewMatrix,
             const PointListBody& bodyLVS) const;
 
         /** Transforms a given body to the unit cube (-1,-1,-1) / (+1,+1,+1) with a specific 
@@ -264,7 +264,7 @@ namespace Ogre {
         @remarks
             Builds a standard view matrix out of a given position, direction and up vector.
         */
-        Matrix4 buildViewMatrix(const Vector3& pos, const Vector3& dir, const Vector3& up) const;
+        Affine3 buildViewMatrix(const Vector3& pos, const Vector3& dir, const Vector3& up) const;
 
     public:
         /** Default constructor.
@@ -272,12 +272,6 @@ namespace Ogre {
             Temporary frustum and camera set up here.
         */
         FocusedShadowCameraSetup(void);
-
-        /** Default destructor.
-        @remarks
-            Temporary frustum and camera destroyed here.
-        */
-        virtual ~FocusedShadowCameraSetup(void);
 
         /** Returns a uniform shadow camera with a focused view.
         */

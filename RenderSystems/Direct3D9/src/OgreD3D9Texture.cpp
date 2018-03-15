@@ -1668,7 +1668,7 @@ namespace Ogre
         const D3DCAPS9& rkCurCaps = device->getD3D9DeviceCaps();                        
         D3DFORMAT eBackBufferFormat = device->getBackBufferFormat();
 
-        if (rkCurCaps.Caps2 & D3DCAPS2_CANAUTOGENMIPMAP == 0)
+        if ((rkCurCaps.Caps2 & D3DCAPS2_CANAUTOGENMIPMAP) == 0)
             return false;
 
         // check for auto gen. mip maps support
@@ -1868,9 +1868,9 @@ namespace Ogre
             }
             catch (...)
             {
-                mLoadingState.set(LOADSTATE_UNLOADED);
-                LogManager::getSingleton().stream() << "Warning: Failed to restore texture " << getName()
-                    << " on DeviceCreate.";
+                mLoadingState.store(LOADSTATE_UNLOADED);
+                LogManager::getSingleton().stream(LML_WARNING)
+                    << "Warning: Failed to restore texture " << getName() << " on DeviceCreate.";
             }
         }
     }
@@ -2049,27 +2049,20 @@ namespace Ogre
             if (mFSAA > 0)
             {
                 // rendering to AA surface
-                IDirect3DSurface9 ** pSurf = (IDirect3DSurface9 **)pData;
-                *pSurf = static_cast<D3D9HardwarePixelBuffer*>(mBuffer)->getFSAASurface(D3D9RenderSystem::getActiveD3D9Device());
-                return;
+                *(IDirect3DSurface9**)pData = static_cast<D3D9HardwarePixelBuffer*>(mBuffer)->getFSAASurface(D3D9RenderSystem::getActiveD3D9Device());
             }
             else
             {
-                IDirect3DSurface9 ** pSurf = (IDirect3DSurface9 **)pData;
-                *pSurf = static_cast<D3D9HardwarePixelBuffer*>(mBuffer)->getSurface(D3D9RenderSystem::getActiveD3D9Device());
-                return;
+                *(IDirect3DSurface9**)pData = static_cast<D3D9HardwarePixelBuffer*>(mBuffer)->getSurface(D3D9RenderSystem::getActiveD3D9Device());
             }
         }
         else if(name == "HWND")
         {
-            HWND *pHwnd = (HWND*)pData;
-            *pHwnd = NULL;
-            return;
+            *(HWND*)pData = NULL;
         }
         else if(name == "BUFFER")
         {
             *static_cast<HardwarePixelBuffer**>(pData) = mBuffer;
-            return;
         }
     }    
     //---------------------------------------------------------------------

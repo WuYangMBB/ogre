@@ -130,7 +130,6 @@ namespace Ogre
     {
         LogManager::getSingleton().logMessage( "D3D11: " + getName() + " created." );
 
-        mEnableFixedPipeline = false;
         mRenderSystemWasInited = false;
         mSwitchingFullscreenCounter = 0;
         mDriverType = D3D_DRIVER_TYPE_HARDWARE;
@@ -773,11 +772,10 @@ namespace Ogre
 
             if( !videoMode )
             {
-                LogManager::getSingleton().logMessage(
-                            "WARNING D3D11: Couldn't find requested video mode. Forcing 32bpp. "
+                LogManager::getSingleton().logWarning(
+                            "D3D11: Couldn't find requested video mode. Forcing 32bpp. "
                             "If you have two GPUs and you're rendering to the GPU that is not "
-                            "plugged to the monitor you can then ignore this message.",
-                            LML_CRITICAL );
+                            "plugged to the monitor you can then ignore this message.");
             }
 
             NameValuePairList miscParams;
@@ -786,7 +784,7 @@ namespace Ogre
             miscParams["FSAAHint"] = fsaaHint;
             miscParams["useNVPerfHUD"] = StringConverter::toString(mUseNVPerfHUD);
             miscParams["gamma"] = StringConverter::toString(hwGamma);
-            //miscParams["useFlipSequentialMode"] = StringConverter::toString(true);
+            //miscParams["useFlipMode"] = StringConverter::toString(true);
 
             opt = mOptions.find("VSync");
             if (opt == mOptions.end())
@@ -986,18 +984,17 @@ namespace Ogre
         rsc->setCapability(RSC_HWSTENCIL);
         rsc->setStencilBufferBitDepth(8);
 
-        rsc->setCapability(RSC_VBO);
         UINT formatSupport;
         if(mFeatureLevel >= D3D_FEATURE_LEVEL_9_2
         || SUCCEEDED(mDevice->CheckFormatSupport(DXGI_FORMAT_R32_UINT, &formatSupport)) && 0 != (formatSupport & D3D11_FORMAT_SUPPORT_IA_INDEX_BUFFER))
             rsc->setCapability(RSC_32BIT_INDEX);
 
-        // Set number of texture units, always 16
-        rsc->setNumTextureUnits(16);
+        // Set number of texture units, cap at OGRE_MAX_TEXTURE_LAYERS
+        rsc->setNumTextureUnits(OGRE_MAX_TEXTURE_LAYERS);
+        rsc->setNumVertexAttributes(D3D11_STANDARD_VERTEX_ELEMENT_COUNT);
         rsc->setCapability(RSC_ANISOTROPY);
         rsc->setCapability(RSC_AUTOMIPMAP);
         rsc->setCapability(RSC_AUTOMIPMAP_COMPRESSED);
-        rsc->setCapability(RSC_BLENDING);
         rsc->setCapability(RSC_DOT3);
         // Cube map
         if (mFeatureLevel >= D3D_FEATURE_LEVEL_10_0)
@@ -1057,15 +1054,6 @@ namespace Ogre
             case 0x163C:
             case 0x8086:
                 rsc->setVendor(GPU_INTEL);
-                break;
-            case 0x5333:
-                rsc->setVendor(GPU_S3);
-                break;
-            case 0x3D3D:
-                rsc->setVendor(GPU_3DLABS);
-                break;
-            case 0x102B:
-                rsc->setVendor(GPU_MATROX);
                 break;
             default:
                 rsc->setVendor(GPU_UNKNOWN);
@@ -1659,7 +1647,7 @@ namespace Ogre
         }
         catch(const D3D11RenderingAPIException& e)
         {
-            if(e.getNumber() == DXGI_ERROR_DEVICE_REMOVED || e.getNumber() == DXGI_ERROR_DEVICE_RESET)
+            if(e.getHResult() == DXGI_ERROR_DEVICE_REMOVED || e.getHResult() == DXGI_ERROR_DEVICE_RESET)
                 LogManager::getSingleton().logMessage("D3D11: Device was lost while rendering.");
             else
                 throw;
@@ -1674,7 +1662,7 @@ namespace Ogre
         }
         catch(const D3D11RenderingAPIException& e)
         {
-            if(e.getNumber() == DXGI_ERROR_DEVICE_REMOVED || e.getNumber() == DXGI_ERROR_DEVICE_RESET)
+            if(e.getHResult() == DXGI_ERROR_DEVICE_REMOVED || e.getHResult() == DXGI_ERROR_DEVICE_RESET)
                 LogManager::getSingleton().logMessage("D3D11: Device was lost while rendering.");
             else
                 throw;
@@ -1776,16 +1764,6 @@ namespace Ogre
         {
             dest[2][2] = -dest[2][2];
         }
-    }
-    //---------------------------------------------------------------------
-    void D3D11RenderSystem::_setPointParameters(Real size, 
-        bool attenuationEnabled, Real constant, Real linear, Real quadratic,
-        Real minSize, Real maxSize)
-    {
-    }
-    //---------------------------------------------------------------------
-    void D3D11RenderSystem::_setPointSpritesEnabled(bool enabled)
-    {
     }
     //---------------------------------------------------------------------
     void D3D11RenderSystem::_setTexture( size_t stage, bool enabled, const TexturePtr& tex )
@@ -3715,11 +3693,6 @@ namespace Ogre
         // nothing to do - D3D11 shares rendering context already
     }
     //---------------------------------------------------------------------
-    String D3D11RenderSystem::getErrorDescription( long errorNumber ) const
-    {
-        return mDevice.getErrorDescription(errorNumber);
-    }
-    //---------------------------------------------------------------------
     void D3D11RenderSystem::determineFSAASettings(uint fsaa, const String& fsaaHint, 
         DXGI_FORMAT format, DXGI_SAMPLE_DESC* outFSAASettings)
     {
@@ -3860,12 +3833,12 @@ namespace Ogre
     {
         if( name == "D3DDEVICE" )
         {
-            ID3D11DeviceN  **device = (ID3D11DeviceN **)pData;
-            *device = mDevice.get();
-            return;
+            *(ID3D11DeviceN**)pData = mDevice.get();
         }
-
-        OGRE_EXCEPT(Exception::ERR_INVALIDPARAMS, "Attribute not found: " + name, "RenderSystem::getCustomAttribute");
+        else
+        {
+            OGRE_EXCEPT(Exception::ERR_INVALIDPARAMS, "Attribute not found: " + name, "RenderSystem::getCustomAttribute");
+        }
     }
     //---------------------------------------------------------------------
     bool D3D11RenderSystem::_getDepthBufferCheckEnabled( void )

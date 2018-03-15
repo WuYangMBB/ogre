@@ -54,6 +54,7 @@ class _OgreSampleClassExport Sample_Terrain : public SdkSample
         , mHeightUpdateCountDown(0)
         , mTerrainPos(1000,0,5000)
         , mTerrainsImported(false)
+        , mKeyPressed(0)
 
     {
         mInfo["Title"] = "Terrain";
@@ -88,11 +89,9 @@ class _OgreSampleClassExport Sample_Terrain : public SdkSample
     {
         Vector3 tsPos;
         terrain->getTerrainPosition(centrepos, &tsPos);
-#if OGRE_PLATFORM != OGRE_PLATFORM_APPLE_IOS && OGRE_BITES_HAVE_SDL
-        const uint8* state = SDL_GetKeyboardState(NULL);
-
-        if (state[SDL_SCANCODE_EQUALS] || state[SDL_SCANCODE_KP_PLUS] ||
-            state[SDL_SCANCODE_KP_MINUS] || state[SDL_SCANCODE_MINUS])
+#if OGRE_PLATFORM != OGRE_PLATFORM_APPLE_IOS
+        if (mKeyPressed == '+' || mKeyPressed == '-' || mKeyPressed == SDLK_KP_PLUS ||
+            mKeyPressed == SDLK_KP_MINUS)
         {
             switch(mMode)
             {
@@ -121,7 +120,7 @@ class _OgreSampleClassExport Sample_Terrain : public SdkSample
 
                             float addedHeight = weight * 250.0 * timeElapsed;
                             float newheight;
-                            if (state[SDL_SCANCODE_EQUALS] || state[SDL_SCANCODE_KP_PLUS])
+                            if (mKeyPressed == '+'  || mKeyPressed == SDLK_KP_PLUS)
                                 newheight = terrain->getHeightAtPoint(x, y) + addedHeight;
                             else
                                 newheight = terrain->getHeightAtPoint(x, y) - addedHeight;
@@ -160,7 +159,7 @@ class _OgreSampleClassExport Sample_Terrain : public SdkSample
                             float paint = weight * timeElapsed;
                             size_t imgY = imgSize - y;
                             float val;
-                            if (state[SDL_SCANCODE_EQUALS] || state[SDL_SCANCODE_KP_PLUS])
+                            if (mKeyPressed == '+'  || mKeyPressed == SDLK_KP_PLUS)
                                 val = layer->getBlendValue(x, imgY) + paint;
                             else
                                 val = layer->getBlendValue(x, imgY) - paint;
@@ -283,15 +282,22 @@ class _OgreSampleClassExport Sample_Terrain : public SdkSample
         mTerrainGroup->saveAllTerrains(onlyIfModified);
     }
 
+    bool keyReleased(const KeyboardEvent& evt)
+    {
+        mKeyPressed = 0;
+        return SdkSample::keyReleased(evt);
+    }
+
     bool keyPressed (const KeyboardEvent &e)
     {
 #if OGRE_PLATFORM != OGRE_PLATFORM_APPLE_IOS
-        SDL_Keymod mod = SDL_GetModState();
+        mKeyPressed = e.keysym.sym;
+
         switch (e.keysym.sym)
         {
         case 's':
             // CTRL-S to save
-            if (mod & KMOD_CTRL)
+            if (e.keysym.mod & KMOD_CTRL)
             {
                 saveTerrains(true);
             }
@@ -411,6 +417,8 @@ class _OgreSampleClassExport Sample_Terrain : public SdkSample
 
     typedef std::list<Entity*> EntityList;
     EntityList mHouseList;
+
+    Keycode mKeyPressed;
 
     void defineTerrain(long x, long y, bool flat = false)
     {
@@ -538,45 +546,6 @@ class _OgreSampleClassExport Sample_Terrain : public SdkSample
         defaultimp.layerList[2].worldSize = 200;
         defaultimp.layerList[2].textureNames.push_back("growth_weirdfungus-03_diffusespecular.dds");
         defaultimp.layerList[2].textureNames.push_back("growth_weirdfungus-03_normalheight.dds");
-    }
-
-    void addTextureDebugOverlay(TrayLocation loc, TexturePtr tex, size_t i)
-    {
-        addTextureDebugOverlay(loc, tex->getName(), i);
-    }
-    void addTextureDebugOverlay(TrayLocation loc, const String& texname, size_t i)
-    {
-        // Create material
-        String matName = "Ogre/DebugTexture" + StringConverter::toString(i);
-        MaterialPtr debugMat = MaterialManager::getSingleton().getByName(matName);
-        if (!debugMat)
-        {
-            debugMat = MaterialManager::getSingleton().create(matName,
-                                                              ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-        }
-        Pass* p = debugMat->getTechnique(0)->getPass(0);
-        p->removeAllTextureUnitStates();
-        p->setLightingEnabled(false);
-        TextureUnitState *t = p->createTextureUnitState(texname);
-        t->setTextureAddressingMode(TextureUnitState::TAM_CLAMP);
-
-        // create template
-        if (!OverlayManager::getSingleton().hasOverlayElement("Ogre/DebugTexOverlay", true))
-        {
-            OverlayElement* e = OverlayManager::getSingleton().createOverlayElement("Panel", "Ogre/DebugTexOverlay", true);
-            e->setMetricsMode(GMM_PIXELS);
-            e->setWidth(128);
-            e->setHeight(128);
-        }
-
-        // add widget
-        String widgetName = "DebugTex"+ StringConverter::toString(i);
-        Widget* w = mTrayMgr->getWidget(widgetName);
-        if (!w)
-        {
-            w = mTrayMgr->createDecorWidget(loc, widgetName, "Ogre/DebugTexOverlay");
-        }
-        w->getOverlayElement()->setMaterialName(matName);
     }
 
     void addTextureShadowDebugOverlay(TrayLocation loc, size_t num)

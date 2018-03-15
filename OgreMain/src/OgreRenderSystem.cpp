@@ -32,16 +32,14 @@ THE SOFTWARE.
 //  being aware of the 3D API. However there are a few
 //  simple functions which can have a base implementation
 
-#include "OgreRenderSystem.h"
-
-#include "OgreException.h"
 #include "OgreRenderTarget.h"
 #include "OgreDepthBuffer.h"
 #include "OgreIteratorWrappers.h"
-#include "OgreLogManager.h"
-#include "OgreTextureManager.h"
-#include "OgreMaterialManager.h"
 #include "OgreHardwareOcclusionQuery.h"
+
+#ifdef OGRE_BUILD_COMPONENT_RTSHADERSYSTEM
+#include <OgreRTShaderConfig.h>
+#endif
 
 namespace Ogre {
 
@@ -71,7 +69,6 @@ namespace Ogre {
         , mDerivedDepthBiasSlopeScale(0.0f)
         , mGlobalInstanceVertexBufferVertexDeclaration(NULL)
         , mGlobalNumberOfInstances(1)
-        , mEnableFixedPipeline(true)
         , mVertexProgramBound(false)
         , mGeometryProgramBound(false)
         , mFragmentProgramBound(false)
@@ -518,14 +515,6 @@ namespace Ogre {
 
     }
     //-----------------------------------------------------------------------
-    void RenderSystem::_setTexture(size_t unit, bool enabled, 
-        const String &texname)
-    {
-        TexturePtr t = TextureManager::getSingleton().getByName(
-            texname, ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME);
-        _setTexture(unit, enabled, t);
-    }
-    //-----------------------------------------------------------------------
     void RenderSystem::_setBindingType(TextureUnitState::BindingType bindingType)
     {
         OGRE_EXCEPT(Exception::ERR_NOT_IMPLEMENTED, 
@@ -633,16 +622,6 @@ namespace Ogre {
         return mCullingMode;
     }
     //-----------------------------------------------------------------------
-    bool RenderSystem::getFixedPipelineEnabled(void) const
-    {
-        return mEnableFixedPipeline;
-    }
-    //-----------------------------------------------------------------------
-    void RenderSystem::setFixedPipelineEnabled(bool enabled)
-    {
-        mEnableFixedPipeline = enabled;
-    }
-    //-----------------------------------------------------------------------
     void RenderSystem::setDepthBufferFor( RenderTarget *renderTarget )
     {
         uint16 poolId = renderTarget->getDepthBufferPool();
@@ -673,8 +652,8 @@ namespace Ogre {
                                      " it says it's incompatible with that RT" );
             }
             else
-                LogManager::getSingleton().logMessage( "WARNING: Couldn't create a suited DepthBuffer"
-                                                       "for RT: " + renderTarget->getName() , LML_CRITICAL);
+                LogManager::getSingleton().logWarning( "Couldn't create a suited DepthBuffer"
+                                                       "for RT: " + renderTarget->getName());
         }
     }
     bool RenderSystem::getWBufferEnabled(void) const
@@ -699,15 +678,23 @@ namespace Ogre {
 
         _cleanupDepthBuffers();
 
-        // Remove all the render targets.
-        // (destroy primary target last since others may depend on it)
+        // Remove all the render targets. Destroy primary target last since others may depend on it.
+        // Keep mRenderTargets valid all the time, so that render targets could receive
+        // appropriate notifications, for example FBO based about GL context destruction.
         RenderTarget* primary = 0;
-        for (RenderTargetMap::iterator it = mRenderTargets.begin(); it != mRenderTargets.end(); ++it)
+        for (RenderTargetMap::iterator it = mRenderTargets.begin(); it != mRenderTargets.end(); /* note - no increment */)
         {
-            if (!primary && it->second->isPrimary())
-                primary = it->second;
+            RenderTarget* current = it->second;
+            if (!primary && current->isPrimary())
+            {
+                ++it;
+                primary = current;
+            }
             else
-                OGRE_DELETE it->second;
+            {
+                it = mRenderTargets.erase(it);
+                OGRE_DELETE current;
+            }
         }
         OGRE_DELETE primary;
         mRenderTargets.clear();
@@ -740,15 +727,6 @@ namespace Ogre {
     {
         *pDest = VertexElement::convertColourValue(colour, getColourVertexElementType());
 
-    }
-    //-----------------------------------------------------------------------
-    void RenderSystem::_setWorldMatrices(const Matrix4* m, unsigned short count)
-    {
-        // Do nothing with these matrices here, it never used for now,
-        // derived class should take care with them if required.
-
-        // Set hardware matrix to nothing
-        _setWorldMatrix(Matrix4::IDENTITY);
     }
     //-----------------------------------------------------------------------
     void RenderSystem::_render(const RenderOperation& op)
@@ -849,11 +827,6 @@ namespace Ogre {
     {
         mClipPlanes.push_back(p);
         mClipPlanesDirty = true;
-    }
-    //---------------------------------------------------------------------
-    void RenderSystem::addClipPlane (Real A, Real B, Real C, Real D)
-    {
-        addClipPlane(Plane(A, B, C, D));
     }
     //---------------------------------------------------------------------
     void RenderSystem::setClipPlanes(const PlaneList& clipPlanes)

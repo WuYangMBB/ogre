@@ -113,9 +113,6 @@ void Sample_VolumeCSG::setupContent(void)
 void Sample_VolumeCSG::setupControls(void)
 {
     mTrayMgr->showCursor();
-#if OGRE_PLATFORM != OGRE_PLATFORM_APPLE_IOS
-        setDragLook(true);
-#endif
     mCameraMan->setStyle(OgreBites::CS_MANUAL);
     mCameraMan->setTopSpeed((Real)25.0);
     // make room for the volume
@@ -202,34 +199,3 @@ void Sample_VolumeCSG::_shutdown()
         
     SdkSample::_shutdown();
 }
-
-//-----------------------------------------------------------------------
-
-#ifndef OGRE_STATIC_LIB
-
-static SamplePlugin* sp;
-static Sample* s;
-    
-//-----------------------------------------------------------------------
-
-extern "C" void _OgreSampleExport dllStartPlugin(void);
-extern "C" void _OgreSampleExport dllStopPlugin(void);
-
-extern "C" _OgreSampleExport void dllStartPlugin()
-{
-    s = new Sample_VolumeCSG();
-    sp = OGRE_NEW SamplePlugin(s->getInfo()["Title"] + " Sample");
-    sp->addSample(s);
-    Root::getSingleton().installPlugin(sp);
-}
-    
-//-----------------------------------------------------------------------
-
-extern "C" _OgreSampleExport void dllStopPlugin()
-{
-    Root::getSingleton().uninstallPlugin(sp); 
-    OGRE_DELETE sp;
-    delete s;
-}
-
-#endif

@@ -28,10 +28,6 @@ THE SOFTWARE.
 #include "OgreStableHeaders.h"
 
 #include "OgreMaterial.h"
-
-#include "OgreMaterialManager.h"
-#include "OgreTechnique.h"
-#include "OgreLogManager.h"
 #include "OgreLodStrategyManager.h"
 #include "OgreLodStrategy.h"
 
@@ -512,8 +508,8 @@ namespace Ogre {
         // Did we find any?
         if (mSupportedTechniques.empty())
         {
-            LogManager::getSingleton().stream(LML_CRITICAL)
-                << "WARNING: material " << mName << " has no supportable "
+            LogManager::getSingleton().stream(LML_WARNING)
+                << "Warning: material " << mName << " has no supportable "
                 << "Techniques and will be blank. Explanation: \n" << mUnsupportedReasons;
         }
     }
@@ -788,7 +784,8 @@ namespace Ogre {
         mLodValues.clear();
         mUserLodValues.clear();
         mUserLodValues.push_back(0);
-        mLodValues.push_back(mLodStrategy->getBaseValue());
+        if (mLodStrategy)
+            mLodValues.push_back(mLodStrategy->getBaseValue());
         for (i = lodValues.begin(); i != iend; ++i)
         {
             mUserLodValues.push_back(*i);

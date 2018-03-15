@@ -29,32 +29,22 @@
 #include "OgrePlatform.h"
 #include <iostream>
 
-// Sadly we needed to add this #if to solve a NACL compiler bug...
-#if (OGRE_PLATFORM == OGRE_PLATFORM_NACL) 
-#include "ppapi/utility/completion_callback_factory.h"
-#endif
-
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
 #define WIN32_LEAN_AND_MEAN
 #include "windows.h"
 #include "OgreString.h"
-#elif OGRE_PLATFORM == OGRE_PLATFORM_APPLE
-#include "SampleBrowser_OSX.h"
 #elif OGRE_PLATFORM == OGRE_PLATFORM_APPLE_IOS
 #include "SampleBrowser_iOS.h"
-#elif OGRE_PLATFORM == OGRE_PLATFORM_NACL
-#include "SampleBrowser_NaCl.h"
 #elif OGRE_PLATFORM == OGRE_PLATFORM_ANDROID
 #include "SampleBrowser_Android.h"
 
+namespace OgreBites {
 SampleBrowser OgreAndroidBridge::mBrowser;
 ndk_helper::PinchDetector OgreAndroidBridge::mPinchGesture;
-
+}
 #endif
 
 #include "SampleBrowser.h"
-
-#if OGRE_PLATFORM != OGRE_PLATFORM_NACL
 
 #if OGRE_PLATFORM == OGRE_PLATFORM_WINRT
 // short version of SDL_winrt_main_NonXAML.cpp
@@ -85,19 +75,9 @@ int main(int argc, char *argv[]) {
     int retVal = UIApplicationMain(argc, argv, @"UIApplication", @"AppDelegate");
     [pool release];
     return retVal;
-#elif (OGRE_PLATFORM == OGRE_PLATFORM_APPLE) && __LP64__
-    NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
-    
-    mAppDelegate = [[AppDelegate alloc] init];
-    [[NSApplication sharedApplication] setDelegate:mAppDelegate];
-    int retVal = NSApplicationMain(argc, (const char **) argv);
-
-    [pool release];
-
-    return retVal;
 #elif OGRE_PLATFORM == OGRE_PLATFORM_ANDROID
-    OgreAndroidBridge::init(state);
-    OgreAndroidBridge::go(state);
+    OgreBites::OgreAndroidBridge::init(state);
+    OgreBites::OgreAndroidBridge::go(state);
 #else
 
     try
@@ -131,5 +111,3 @@ int main(int argc, char *argv[]) {
     return 0;
 #endif
 }
-
-#endif    

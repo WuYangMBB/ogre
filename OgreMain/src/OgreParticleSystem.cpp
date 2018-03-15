@@ -28,19 +28,13 @@ THE SOFTWARE.
 #include "OgreStableHeaders.h"
 
 #include "OgreParticleSystem.h"
-#include "OgreParticleSystemManager.h"
 #include "OgreParticleEmitter.h"
 #include "OgreParticleAffector.h"
 #include "OgreParticle.h"
 #include "OgreIteratorWrappers.h"
-#include "OgreCamera.h"
-#include "OgreStringConverter.h"
 #include "OgreParticleAffectorFactory.h"
 #include "OgreParticleSystemRenderer.h"
-#include "OgreMaterialManager.h"
-#include "OgreSceneManager.h"
 #include "OgreControllerManager.h"
-#include "OgreRoot.h"
 
 namespace Ogre {
     // Init statics
@@ -578,7 +572,7 @@ namespace Ogre {
             // The particle is a visual particle if the emit_emitter property of the emitter isn't set 
             Particle* p = 0;
             String  emitterName = emitter->getEmittedEmitter();
-            if (emitterName == BLANKSTRING)
+            if (emitterName.empty())
                 p = createParticle();
             else
                 p = createEmitterParticle(emitterName);
@@ -879,7 +873,7 @@ namespace Ogre {
                 // node transform, so reverse transform back since we're expected to 
                 // provide a local AABB
                 AxisAlignedBox newAABB(mWorldAABB);
-                newAABB.transformAffine(mParentNode->_getFullTransform().inverseAffine());
+                newAABB.transform(mParentNode->_getFullTransform().inverse());
 
                 // Merge calculated box with current AABB to preserve any user-set AABB
                 mAABB.merge(newAABB);
@@ -892,8 +886,8 @@ namespace Ogre {
     void ParticleSystem::fastForward(Real time, Real interval)
     {
         // First make sure all transforms are up to date
-
-        for (Real ftime = 0; ftime < time; ftime += interval)
+        size_t steps = size_t(time/interval + 0.5f); // integer round
+        for (size_t i = 0; i < steps; i++)
         {
             _update(interval);
         }
@@ -1306,7 +1300,7 @@ namespace Ogre {
         {
             // Determine the names of all emitters that are emitted
             ParticleEmitter* emitter = *emitterIterator ;
-            if (emitter && emitter->getEmittedEmitter() != BLANKSTRING)
+            if (emitter && !emitter->getEmittedEmitter().empty())
             {
                 // This one will be emitted, register its name and leave the vector empty!
                 EmittedEmitterList empty;
@@ -1319,7 +1313,7 @@ namespace Ogre {
                 emitterInner = *emitterIteratorInner;
                 if (emitter && 
                     emitterInner && 
-                    emitter->getName() != BLANKSTRING && 
+                    !emitter->getName().empty() &&
                     emitter->getName() == emitterInner->getEmittedEmitter())
                 {
                     emitter->setEmitted(true);

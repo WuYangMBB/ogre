@@ -36,14 +36,9 @@ THE SOFTWARE.
 
 #include <iostream>
 
-#ifdef WIN32
+#if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
 #define WIN32_LEAN_AND_MEAN
-#include "windows.h"
-#endif
-
-#if (OGRE_PLATFORM == OGRE_PLATFORM_APPLE) && __LP64__
-#include <AppKit/AppKit.h>
-static id mAppDelegate;
+#include <windows.h>
 #endif
 
 #ifdef OGRE_STATIC_LIB
@@ -89,7 +84,7 @@ TestContext::TestContext(int argc, char** argv) : OgreBites::SampleContext(), mS
     mSummaryOutputDir = binOpt["-o"];
     mHelp = unOpt["-h"] || unOpt["--help"];
 
-    if(mReferenceSetPath == BLANKSTRING)
+    if(mReferenceSetPath.empty())
         mReferenceSetPath = mOutputDir;
 }
 //-----------------------------------------------------------------------
@@ -146,10 +141,6 @@ void TestContext::setup()
     Ogre::TextureManager::getSingleton().setDefaultNumMipmaps(5);
     mRoot->addFrameListener(this);
 
-#if OGRE_PLATFORM != OGRE_PLATFORM_ANDROID
-    Ogre::WindowEventUtilities::addWindowEventListener(mWindow, this);
-#endif
-
     // Get the path and list of test plugins from the config file.
     Ogre::ConfigFile testConfig;
     testConfig.load(mFSLayer->getConfigFilePath("tests.cfg"));
@@ -200,7 +191,7 @@ void TestContext::setup()
     strftime(temp, 20, "%Y-%m-%d %H:%M:%S", gmtime(&raw));
     Ogre::String timestamp = Ogre::String(temp);
 
-    if(mOutputDir == BLANKSTRING)
+    if(mOutputDir.empty())
     {
         Ogre::String filestamp = Ogre::String(temp);
         // name for this batch (used for naming the directory, and uniquely identifying this batch)
@@ -537,7 +528,7 @@ bool TestContext::oneTimeConfig()
 void TestContext::setupDirectories(Ogre::String batchName)
 {
     // ensure there's a root directory for visual tests
-    if(mOutputDir == BLANKSTRING)
+    if(mOutputDir.empty())
     {
         mOutputDir = mFSLayer->getWritablePath("VisualTests/");
         static_cast<Ogre::FileSystemLayer*>(mFSLayer)->createDirectory(mOutputDir);
@@ -671,16 +662,6 @@ int main(int argc, char *argv[])
     NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
     int retVal = UIApplicationMain(argc, argv, @"UIApplication", @"AppDelegate");
     [pool release];
-    return retVal;
-#elif (OGRE_PLATFORM == OGRE_PLATFORM_APPLE) && __LP64__
-    NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
-
-    mAppDelegate = [[AppDelegate alloc] init];
-    [[NSApplication sharedApplication] setDelegate:mAppDelegate];
-    int retVal = NSApplicationMain(argc, (const char **) argv);
-
-    [pool release];
-
     return retVal;
 #else
     TestContext tc(argc, argv);

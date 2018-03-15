@@ -57,24 +57,12 @@ namespace Ogre {
     class _OgreExport SceneNode : public Node
     {
     public:
-#if OGRE_NODE_STORAGE_LEGACY
-        typedef OGRE_HashMap<String, MovableObject*> ObjectMap;
-        typedef MapIterator<ObjectMap> ObjectIterator;
-        typedef ConstMapIterator<ObjectMap> ConstObjectIterator;
-#else
         typedef vector<MovableObject*>::type ObjectMap;
         typedef VectorIterator<ObjectMap> ObjectIterator;
         typedef ConstVectorIterator<ObjectMap> ConstObjectIterator;
-#endif
 
     protected:
         ObjectMap mObjectsByName;
-
-        /// Pointer to a Wire Bounding Box for this Node
-        WireBoundingBox *mWireBoundingBox;
-        /// Flag that determines if the bounding box of the node should be displayed
-        bool mShowBoundingBox;
-        bool mHideBoundingBox;
 
         /// SceneManager which created this node
         SceneManager* mCreator;
@@ -98,19 +86,24 @@ namespace Ogre {
         */
         virtual void setInSceneGraph(bool inGraph);
 
-        /// Whether to yaw around a fixed axis.
-        bool mYawFixed;
-        /// Fixed axis to yaw around
-        Vector3 mYawFixedAxis;
-
         /// Auto tracking target
         SceneNode* mAutoTrackTarget;
+        /// Pointer to a Wire Bounding Box for this Node
+        std::unique_ptr<WireBoundingBox> mWireBoundingBox;
         /// Tracking offset for fine tuning
         Vector3 mAutoTrackOffset;
         /// Local 'normal' direction vector
         Vector3 mAutoTrackLocalDirection;
+        /// Fixed axis to yaw around
+        Vector3 mYawFixedAxis;
+
+        /// Whether to yaw around a fixed axis.
+        bool mYawFixed : 1;
         /// Is this node a current part of the scene graph?
-        bool mIsInSceneGraph;
+        bool mIsInSceneGraph : 1;
+        /// Flag that determines if the bounding box of the node should be displayed
+        bool mShowBoundingBox : 1;
+        bool mHideBoundingBox : 1;
     public:
         /** Constructor, only to be called by the creator SceneManager.
         @remarks
@@ -252,12 +245,10 @@ namespace Ogre {
             return ConstObjectIterator(mObjectsByName.begin(), mObjectsByName.end());
         }
 
-#if !OGRE_NODE_STORAGE_LEGACY
         /// The MovableObjects associated with this node
         const ObjectMap& getAttachedObjects() const {
             return mObjectsByName;
         }
-#endif
 
         /** Gets the creator of this scene node. 
         @remarks

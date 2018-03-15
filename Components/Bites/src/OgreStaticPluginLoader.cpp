@@ -9,9 +9,6 @@
 #ifdef OGRE_BUILD_RENDERSYSTEM_GL3PLUS
 #define OGRE_STATIC_GL3Plus
 #endif
-#ifdef OGRE_BUILD_RENDERSYSTEM_GLES
-#define OGRE_STATIC_GLES
-#endif
 #ifdef OGRE_BUILD_RENDERSYSTEM_GLES2
 #define OGRE_STATIC_GLES2
 #endif
@@ -64,9 +61,6 @@
 #ifdef OGRE_STATIC_GL3Plus
 #  include "OgreGL3PlusPlugin.h"
 #endif
-#ifdef OGRE_STATIC_GLES
-#  include "OgreGLESPlugin.h"
-#endif
 #ifdef OGRE_STATIC_GLES2
 #  include "OgreGLES2Plugin.h"
 #endif
@@ -82,6 +76,12 @@
 #ifdef OGRE_STATIC_OctreeZone
 #  include "OgreOctreeZonePlugin.h"
 #endif
+#ifdef OGRE_BUILD_PLUGIN_STBI
+#   include "OgreSTBICodec.h"
+#endif
+#if defined(OGRE_BUILD_PLUGIN_FREEIMAGE) && !defined(OGRE_BUILD_PLUGIN_STBI)
+#   include "OgreFreeImageCodec.h"
+#endif
 #endif
 
 void OgreBites::StaticPluginLoader::load()
@@ -95,10 +95,6 @@ void OgreBites::StaticPluginLoader::load()
 #endif
 #ifdef OGRE_STATIC_GL3Plus
     plugin = OGRE_NEW GL3PlusPlugin();
-    mPlugins.push_back(plugin);
-#endif
-#ifdef OGRE_STATIC_GLES
-    plugin = OGRE_NEW GLESPlugin();
     mPlugins.push_back(plugin);
 #endif
 #ifdef OGRE_STATIC_GLES2
@@ -136,6 +132,14 @@ void OgreBites::StaticPluginLoader::load()
 #endif
 #ifdef OGRE_STATIC_OctreeZone
     plugin = OGRE_NEW OctreeZonePlugin();
+    mPlugins.push_back(plugin);
+#endif
+#ifdef OGRE_BUILD_PLUGIN_STBI
+    plugin = OGRE_NEW STBIPlugin();
+    mPlugins.push_back(plugin);
+#endif
+#if defined(OGRE_BUILD_PLUGIN_FREEIMAGE) && !defined(OGRE_BUILD_PLUGIN_STBI)
+    plugin = OGRE_NEW FreeImagePlugin();
     mPlugins.push_back(plugin);
 #endif
 #endif

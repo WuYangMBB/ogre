@@ -26,10 +26,6 @@ THE SOFTWARE.
 -----------------------------------------------------------------------------
 */
 #include "OgreStableHeaders.h"
-
-#include "OgrePrerequisites.h"
-#include "OgreAlignedAllocator.h"
-
 #include "OgrePlatformInformation.h"
 
 /**
@@ -48,7 +44,17 @@ THE SOFTWARE.
 
 namespace Ogre {
 
-    //---------------------------------------------------------------------
+    /** Allocate memory with given alignment.
+        @param
+            size The size of memory need to allocate.
+        @param
+            alignment The alignment of result pointer, must be power of two
+            and in range [1, 128].
+        @return
+            The allocated memory pointer.
+        @par
+            On failure, exception will be throw.
+    */
     void* AlignedMemory::allocate(size_t size, size_t alignment)
     {
         assert(0 < alignment && alignment <= 128 && Bitwise::isPO2(alignment));

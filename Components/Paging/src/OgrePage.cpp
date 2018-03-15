@@ -37,11 +37,8 @@ THE SOFTWARE.
 #include "OgrePageContentCollectionFactory.h"
 #include "OgrePageContentCollection.h"
 #include "OgreLogManager.h"
+#include "OgreFileSystemLayer.h"
 #include <iomanip>
-
-#if OGRE_PLATFORM == OGRE_PLATFORM_APPLE_IOS
-    #include "macUtils.h"
-#endif
 
 namespace Ogre
 {
@@ -135,7 +132,7 @@ namespace Ogre
         stream.read(&storedID);
         if (mID != storedID)
         {
-            LogManager::getSingleton().stream() << "Error: Tried to populate Page ID " << mID
+            LogManager::getSingleton().stream(LML_CRITICAL) << "Error: Tried to populate Page ID " << mID
                 << " with data corresponding to page ID " << storedID;
             stream.undoReadChunk(CHUNK_ID);
             return false;
@@ -457,9 +454,9 @@ namespace Ogre
         str    << std::setw(8) << std::setfill('0') << std::hex << mID << ".page";
 
 #if OGRE_PLATFORM == OGRE_PLATFORM_APPLE_IOS
+        static FileSystemLayer fs("");
         // For the iOS we need to prefix the file name with the path to the Caches folder
-        String cacheStr(Ogre::macCachePath() + str.str());
-        return cacheStr;
+        return fs.getWritablePath(str.str());
 #else
         return str.str();
 #endif

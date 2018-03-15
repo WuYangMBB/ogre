@@ -30,10 +30,6 @@ THE SOFTWARE.
 
 #include "OgreETCCodec.h"
 #include "OgreImage.h"
-#include "OgreException.h"
-
-#include "OgreLogManager.h"
-#include "OgreBitwise.h"
 
 #define FOURCC(c0, c1, c2, c3) (c0 | (c1 << 8) | (c2 << 16) | (c3 << 24))
 #define KTX_ENDIAN_REF      (0x04030201)
@@ -134,22 +130,23 @@ namespace Ogre {
     { 
     }
     //---------------------------------------------------------------------
-    DataStreamPtr ETCCodec::encode(MemoryDataStreamPtr& input, Codec::CodecDataPtr& pData) const
-    {        
+    DataStreamPtr ETCCodec::encode(const MemoryDataStreamPtr& input,
+                                   const Codec::CodecDataPtr& pData) const
+    {
         OGRE_EXCEPT(Exception::ERR_NOT_IMPLEMENTED,
                     "ETC encoding not supported",
                     "ETCCodec::encode" ) ;
     }
     //---------------------------------------------------------------------
-    void ETCCodec::encodeToFile(MemoryDataStreamPtr& input,
-        const String& outFileName, Codec::CodecDataPtr& pData) const
+    void ETCCodec::encodeToFile(const MemoryDataStreamPtr& input, const String& outFileName,
+                                const Codec::CodecDataPtr& pData) const
     {
         OGRE_EXCEPT(Exception::ERR_NOT_IMPLEMENTED,
                     "ETC encoding not supported",
                     "ETCCodec::encodeToFile" ) ;
     }
     //---------------------------------------------------------------------
-    Codec::DecodeResult ETCCodec::decode(DataStreamPtr& stream) const
+    Codec::DecodeResult ETCCodec::decode(const DataStreamPtr& stream) const
     {
         DecodeResult ret;
         if (decodeKTX(stream, ret))
@@ -200,7 +197,7 @@ namespace Ogre {
         return BLANKSTRING;
     }
     //---------------------------------------------------------------------
-    bool ETCCodec::decodePKM(DataStreamPtr& stream, DecodeResult& result) const
+    bool ETCCodec::decodePKM(const DataStreamPtr& stream, DecodeResult& result) const
     {
         PKMHeader header;
 
@@ -278,7 +275,7 @@ namespace Ogre {
         return true;
     }
     //---------------------------------------------------------------------
-    bool ETCCodec::decodeKTX(DataStreamPtr& stream, DecodeResult& result) const
+    bool ETCCodec::decodeKTX(const DataStreamPtr& stream, DecodeResult& result) const
     {
         KTXHeader header;
         // Read the ETC1 header
@@ -326,6 +323,18 @@ namespace Ogre {
         case 33779: // DXT 5
             imgData->format = PF_DXT5;
             break;
+         case 0x8c00: // COMPRESSED_RGB_PVRTC_4BPPV1_IMG
+            imgData->format = PF_PVRTC_RGB4;
+            break;
+        case 0x8c01: // COMPRESSED_RGB_PVRTC_2BPPV1_IMG
+            imgData->format = PF_PVRTC_RGB2;
+            break;
+        case 0x8c02: // COMPRESSED_RGBA_PVRTC_4BPPV1_IMG
+            imgData->format = PF_PVRTC_RGBA4;
+            break;
+        case 0x8c03: // COMPRESSED_RGBA_PVRTC_2BPPV1_IMG
+            imgData->format = PF_PVRTC_RGBA2;
+            break;
         default:        
             imgData->format = PF_ETC1_RGB8;
             break;
@@ -335,8 +344,10 @@ namespace Ogre {
         if (header.glType == 0 || header.glFormat == 0)
             imgData->flags |= IF_COMPRESSED;
 
-        size_t numFaces = 1; // Assume one face until we know otherwise
-                             // Calculate total size from number of mipmaps, faces and size
+		size_t numFaces = header.numberOfFaces;
+		if (numFaces > 1)
+			imgData->flags |= IF_CUBEMAP;
+        // Calculate total size from number of mipmaps, faces and size
         imgData->size = Image::calculateSize(imgData->num_mipmaps, numFaces,
                                              imgData->width, imgData->height, imgData->depth, imgData->format);
 
@@ -347,12 +358,18 @@ namespace Ogre {
 
         // Now deal with the data
         uchar* destPtr = output->getPtr();
+        uint32 mipOffset = 0;
         for (uint32 level = 0; level < header.numberOfMipmapLevels; ++level)
         {
             uint32 imageSize = 0;
             stream->read(&imageSize, sizeof(uint32));
-            stream->read(destPtr, imageSize);
-            destPtr += imageSize;
+
+            for(uint32 face = 0; face < numFaces; ++face)
+            {
+                uchar* placePtr = destPtr + ((imgData->size)/numFaces)*face + mipOffset; // shuffle mip and face
+                stream->read(placePtr, imageSize);
+            }
+            mipOffset += imageSize;
         }
 
         result.first = output;

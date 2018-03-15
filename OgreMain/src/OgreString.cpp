@@ -26,7 +26,6 @@ THE SOFTWARE.
 -----------------------------------------------------------------------------
 */
 #include "OgreStableHeaders.h"
-#include "OgreString.h"
 
 namespace Ogre {
     const String& StringUtil::BLANK = BLANKSTRING;
@@ -374,7 +373,7 @@ namespace Ogre {
     void StringUtil::splitBaseFilename(const Ogre::String& fullName, 
         Ogre::String& outBasename, Ogre::String& outExtention)
     {
-        size_t i = fullName.find_last_of(".");
+        size_t i = fullName.find_last_of('.');
         if (i == Ogre::String::npos)
         {
             outExtention.clear();

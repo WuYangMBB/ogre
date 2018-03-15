@@ -25,15 +25,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 -----------------------------------------------------------------------------
 */
-#include "OgreShaderFFPAlphaTest.h"
+#include "OgreShaderPrecompiledHeaders.h"
 #ifdef RTSHADER_SYSTEM_BUILD_CORE_SHADERS
-#include "OgreShaderFunctionAtom.h"
-#include "OgreShaderProgram.h"
-#include "OgreShaderProgramSet.h"
-#include "OgrePass.h"
-#include "OgreMaterialSerializer.h"
-#include "OgreShaderFFPRenderState.h"
-
 
 namespace Ogre {
 	namespace RTShader {
@@ -87,7 +80,7 @@ namespace Ogre {
 			FunctionInvocation *curFuncInvocation;
 
 			//Fragment shader invocations
-			curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_ALPHA_TEST, FFP_PS_ALPHA_TEST, 0);
+			curFuncInvocation = OGRE_NEW FunctionInvocation(FFP_FUNC_ALPHA_TEST, FFP_PS_ALPHA_TEST);
 			curFuncInvocation->pushOperand(mPSAlphaFunc, Operand::OPS_IN);
 			curFuncInvocation->pushOperand(mPSAlphaRef, Operand::OPS_IN);
 			curFuncInvocation->pushOperand(mPSOutDiffuse, Operand::OPS_IN);

@@ -389,7 +389,7 @@ namespace Ogre {
         String mName;
 
         /// Queue of objects for rendering
-        RenderQueue* mRenderQueue;
+        std::unique_ptr<RenderQueue> mRenderQueue;
         bool mLastRenderQueueInvocationCustom;
 
         /// Current ambient light, cached for RenderSystem
@@ -410,11 +410,7 @@ namespace Ogre {
         typedef map<String, InstanceManager*>::type InstanceManagerMap;
         InstanceManagerMap  mInstanceManagerMap;
 
-#if OGRE_NODE_STORAGE_LEGACY
-        typedef map<String, SceneNode*>::type SceneNodeList;
-#else
         typedef vector<SceneNode*>::type SceneNodeList;
-#endif
 
         /** Central list of SceneNodes - for easy memory management.
             @note
@@ -430,7 +426,7 @@ namespace Ogre {
         Viewport* mCurrentViewport;
 
         /// Root scene node
-        SceneNode* mSceneRoot;
+        std::unique_ptr<SceneNode> mSceneRoot;
 
         /// Autotracking scene nodes
         typedef set<SceneNode*>::type AutoTrackingSceneNodes;
@@ -440,7 +436,7 @@ namespace Ogre {
         // Sky plane
         Entity* mSkyPlaneEntity;
         Entity* mSkyDomeEntity[5];
-        ManualObject* mSkyBoxObj;
+        std::unique_ptr<ManualObject> mSkyBoxObj;
 
         SceneNode* mSkyPlaneNode;
         SceneNode* mSkyDomeNode;
@@ -475,7 +471,7 @@ namespace Ogre {
         uint8 mWorldGeometryRenderQueue;
         
         unsigned long mLastFrameNumber;
-        Matrix4 mTempXform[256];
+        Affine3 mTempXform[256];
         bool mResetIdentityView;
         bool mResetIdentityProj;
 
@@ -642,6 +638,14 @@ namespace Ogre {
             which override the camera's own view / projection materices. */
         void useRenderableViewProjMode(const Renderable* pRend, bool fixedFunction);
         
+        /** Internal method used by _renderSingleObject to set the world transform */
+        void setWorldTransform(Renderable* rend, bool fixedFunction);
+
+        /** Internal method used by _renderSingleObject to render a single light pass */
+        void issueRenderWithLights(Renderable* rend, const Pass* pass,
+                                   const LightList* pLightListToUse, bool fixedFunction,
+                                   bool lightScissoringClipping);
+
         /** Internal method used by _renderSingleObject to deal with renderables
             which override the camera's own view / projection matrices. */
         void resetViewProjMode(bool fixedFunction);
@@ -720,7 +724,7 @@ namespace Ogre {
         }
 
         /// Utility class for calculating automatic parameters for gpu programs
-        AutoParamDataSource* mAutoParamDataSource;
+        std::unique_ptr<AutoParamDataSource> mAutoParamDataSource;
 
         CompositorChain* mActiveCompositorChain;
         bool mLateMaterialResolving;
@@ -735,7 +739,7 @@ namespace Ogre {
         HardwareIndexBufferSharedPtr mShadowIndexBuffer;
         size_t mShadowIndexBufferSize;
         size_t mShadowIndexBufferUsedSize;
-        Rectangle2D* mFullScreenQuad;
+        std::unique_ptr<Rectangle2D> mFullScreenQuad;
         Real mShadowDirLightExtrudeDist;
         IlluminationRenderStage mIlluminationStage;
         ShadowTextureConfigList mShadowTextureConfigList;
@@ -853,8 +857,8 @@ namespace Ogre {
 
         typedef vector<ShadowCaster*>::type ShadowCasterList;
         ShadowCasterList mShadowCasterList;
-        SphereSceneQuery* mShadowCasterSphereQuery;
-        AxisAlignedBoxSceneQuery* mShadowCasterAABBQuery;
+        std::unique_ptr<SphereSceneQuery> mShadowCasterSphereQuery;
+        std::unique_ptr<AxisAlignedBoxSceneQuery> mShadowCasterAABBQuery;
         Real mDefaultShadowFarDist;
         Real mDefaultShadowFarDistSquared;
         Real mShadowTextureOffset; /// Proportion of texture offset in view direction e.g. 0.4
@@ -917,7 +921,7 @@ namespace Ogre {
             bool queryResult(SceneQuery::WorldFragment* fragment);
         };
 
-        ShadowCasterSceneQueryListener* mShadowCasterQueryListener;
+        std::unique_ptr<ShadowCasterSceneQueryListener> mShadowCasterQueryListener;
 
         /** Internal method for locating a list of shadow casters which 
             could be affecting the frustum for a given light. 
@@ -988,19 +992,17 @@ namespace Ogre {
 
         /// Whether to use camera-relative rendering
         bool mCameraRelativeRendering;
-        Matrix4 mCachedViewMatrix;
+        Affine3 mCachedViewMatrix;
         Vector3 mCameraRelativePosition;
 
         /// Last light sets
         uint32 mLastLightHash;
         unsigned short mLastLightLimit;
-        uint32 mLastLightHashGpuProgram;
         /// Gpu params that need rebinding (mask of GpuParamVariability)
         uint16 mGpuParamsDirty;
 
-        void useLights(const LightList& lights, unsigned short limit);
-        void setViewMatrix(const Matrix4& m);
-        void useLightsGpuProgram(const Pass* pass, const LightList* lights);
+        void useLights(const LightList& lights, ushort limit, bool fixedFunction);
+        void setViewMatrix(const Affine3& m);
         void bindGpuProgram(GpuProgram* prog);
         void updateGpuProgramParameters(const Pass* p);
 
@@ -2303,7 +2305,7 @@ namespace Ogre {
             this within the main render loop.
         */
         void manualRender(RenderOperation* rend, Pass* pass, Viewport* vp,
-            const Matrix4& worldMatrix, const Matrix4& viewMatrix, const Matrix4& projMatrix, 
+            const Affine3& worldMatrix, const Affine3& viewMatrix, const Matrix4& projMatrix,
             bool doBeginEndFrame = false) ;
 
         /** Manual rendering method for rendering a single object. 
@@ -2326,7 +2328,7 @@ namespace Ogre {
         which will be used for a single render of this object.
         */
         void manualRender(Renderable* rend, const Pass* pass, Viewport* vp,
-            const Matrix4& viewMatrix, const Matrix4& projMatrix, bool doBeginEndFrame = false, bool lightScissoringClipping = true, 
+            const Affine3& viewMatrix, const Matrix4& projMatrix, bool doBeginEndFrame = false, bool lightScissoringClipping = true,
             bool doLightIteration = true, const LightList* manualLightList = 0);
 
         /** Retrieves the internal render queue, for advanced users only.
@@ -2838,9 +2840,6 @@ namespace Ogre {
         */
         void setShadowTextureCasterMaterial(const MaterialPtr& mat);
 
-        /// @override
-        /// @deprecated use setShadowTextureCasterMaterial(const MaterialPtr&)
-        OGRE_DEPRECATED void setShadowTextureCasterMaterial(const String& name);
         /** Sets the default material to use for rendering shadow receivers.
         @remarks
             By default shadow receivers are rendered as a post-pass using basic
@@ -2863,10 +2862,6 @@ namespace Ogre {
             techniques may be used for hardware fallback.
         */
         void setShadowTextureReceiverMaterial(const MaterialPtr& mat);
-
-        /// @override
-        /// @deprecated use setShadowTextureReceiverMaterial(const MaterialPtr&)
-        OGRE_DEPRECATED void setShadowTextureReceiverMaterial(const String& name);
 
         /** Sets whether or not shadow casters should be rendered into shadow
             textures using their back faces rather than their front faces. 
@@ -3011,26 +3006,6 @@ namespace Ogre {
         void destroyStaticGeometry(const String& name);
         /** Remove & destroy all StaticGeometry instances. */
         void destroyAllStaticGeometry(void);
-
-        /** Creates a InstancedGeometry instance suitable for use with this
-            SceneManager.
-        @remarks
-            InstancedGeometry is a way of batching up geometry into a more 
-            efficient form, and still be able to move it. Please 
-            read the InstancedGeometry class documentation for full information.
-        @param name The name to give the new object
-        @return The new InstancedGeometry instance
-        @deprecated use createInstanceManager() with InstanceManager::ShaderBased instead
-        */
-        InstancedGeometry* createInstancedGeometry(const String& name);
-        /** Retrieve a previously created InstancedGeometry instance. */
-        InstancedGeometry* getInstancedGeometry(const String& name) const;
-        /** Remove & destroy a InstancedGeometry instance. */
-        void destroyInstancedGeometry(InstancedGeometry* geom);
-        /** Remove & destroy a InstancedGeometry instance. */
-        void destroyInstancedGeometry(const String& name);
-        /** Remove & destroy all InstancedGeometry instances. */
-        void destroyAllInstancedGeometry(void);
 
         /** Creates an InstanceManager interface to create & manipulate instanced entities
             You need to call this function at least once before start calling createInstancedEntity
@@ -3491,10 +3466,6 @@ namespace Ogre {
     {
         /// A globally unique string identifying the scene manager type
         String typeName;
-        /// A text description of the scene manager
-        String description;
-        /// A mask describing which sorts of scenes this manager can handle
-        SceneTypeMask sceneTypeMask;
         /// Flag indicating whether world geometry is supported
         bool worldGeometrySupported;
     };

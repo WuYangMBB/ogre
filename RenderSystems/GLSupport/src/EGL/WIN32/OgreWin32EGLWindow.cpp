@@ -30,10 +30,8 @@ THE SOFTWARE.
 #include "OgreException.h"
 #include "OgreLogManager.h"
 #include "OgreStringConverter.h"
-#include "OgreWindowEventUtilities.h"
 
-#include "OgreGLES2Prerequisites.h"
-#include "OgreGLES2RenderSystem.h"
+#include "OgreViewport.h"
 
 #include "OgreWin32EGLSupport.h"
 #include "OgreWin32EGLWindow.h"
@@ -201,7 +199,7 @@ namespace Ogre {
             }
 
             // register class and create window
-            WNDCLASS wc = { CS_OWNDC, WindowEventUtilities::_WndProc, 0, 0, hInst,
+            WNDCLASS wc = { CS_OWNDC, NULL, 0, 0, hInst,
                 LoadIcon(NULL, IDI_APPLICATION), LoadCursor(NULL, IDC_ARROW),
                 (HBRUSH)GetStockObject(BLACK_BRUSH), NULL, "OgreGLES2Window" };
             RegisterClass(&wc);
@@ -235,8 +233,6 @@ namespace Ogre {
             // Pass pointer to self as WM_CREATE parameter
             mWindow = CreateWindowEx(dwStyleEx, "OgreGLES2Window", title.c_str(),
                 dwStyle, mLeft, mTop, mWidth, mHeight, parent, 0, hInst, this);
-
-            WindowEventUtilities::_addRenderWindow(this);
 
             LogManager::getSingleton().stream()
                 << "Created Win32Window '"
@@ -286,7 +282,50 @@ namespace Ogre {
 
     void Win32EGLWindow::windowMovedOrResized()
     {
+		if (!mWindow || IsIconic(mWindow))
+			return;
+		
+		RECT rc;
+		BOOL result;
 
+		// Update top left parameters
+		result = GetWindowRect(mWindow, &rc);
+		if (result == FALSE)
+		{
+			mTop = 0;
+			mLeft = 0;
+			mWidth = 0;
+			mHeight = 0;
+			return;
+		}
+
+		mTop = rc.top;
+		mLeft = rc.left;
+
+		// width and height represent drawable area only
+		result = GetClientRect(mWindow, &rc);
+		if (result == FALSE)
+		{
+			mTop = 0;
+			mLeft = 0;
+			mWidth = 0;
+			mHeight = 0;
+			return;
+		}
+		unsigned int width = rc.right - rc.left;
+		unsigned int height = rc.bottom - rc.top;
+
+		// Case window resized.
+		if (width != mWidth || height != mHeight)
+		{
+			mWidth  = rc.right - rc.left;
+			mHeight = rc.bottom - rc.top;
+
+			// Notify viewports of resize
+			ViewportList::iterator it = mViewportList.begin();
+			while( it != mViewportList.end() )
+				(*it++).second->_updateDimensions();			
+		}
     }
 
     void Win32EGLWindow::switchFullScreen( bool fullscreen )

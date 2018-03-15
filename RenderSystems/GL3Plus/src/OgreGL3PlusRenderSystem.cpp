@@ -52,9 +52,8 @@ Copyright (c) 2000-2014 Torus Knot Software Ltd
 #include "OgreGLSLShaderFactory.h"
 #include "OgreGL3PlusFBORenderTexture.h"
 #include "OgreGL3PlusHardwareBufferManager.h"
-#include "OgreGLSLSeparableProgramManager.h"
+#include "OgreGLSLProgramManager.h"
 #include "OgreGLSLSeparableProgram.h"
-#include "OgreGLSLMonolithicProgramManager.h"
 #include "OgreGLVertexArrayObject.h"
 #include "OgreRoot.h"
 #include "OgreConfig.h"
@@ -170,21 +169,12 @@ namespace Ogre {
         mCurrentHullShader = 0;
         mCurrentDomainShader = 0;
         mCurrentComputeShader = 0;
-        mEnableFixedPipeline = false;
         mLargestSupportedAnisotropy = 1;
     }
 
     GL3PlusRenderSystem::~GL3PlusRenderSystem()
     {
         shutdown();
-
-        // Destroy render windows
-        RenderTargetMap::iterator i;
-        for (i = mRenderTargets.begin(); i != mRenderTargets.end(); ++i)
-        {
-            OGRE_DELETE i->second;
-        }
-        mRenderTargets.clear();
 
         if (mGLSupport)
             OGRE_DELETE mGLSupport;
@@ -263,13 +253,13 @@ namespace Ogre {
         rsc->setCapability(RSC_AUTOMIPMAP);
         rsc->setCapability(RSC_AUTOMIPMAP_COMPRESSED);
 
-        // Check for blending support
-        rsc->setCapability(RSC_BLENDING);
-
         // Multitexturing support and set number of texture units
         GLint units;
         OGRE_CHECK_GL_ERROR(glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &units));
-        rsc->setNumTextureUnits(std::min<ushort>(16, units));
+        rsc->setNumTextureUnits(std::min(OGRE_MAX_TEXTURE_LAYERS, units));
+
+        glGetIntegerv( GL_MAX_VERTEX_ATTRIBS , &units);
+        rsc->setNumVertexAttributes(units);
 
         // Check for Anisotropy support
         if (checkExtension("GL_EXT_texture_filter_anisotropic"))
@@ -298,7 +288,6 @@ namespace Ogre {
         rsc->setCapability(RSC_HW_GAMMA);
 
         // Vertex Buffer Objects are always supported
-        rsc->setCapability(RSC_VBO);
         rsc->setCapability(RSC_MAPBUFFER);
         rsc->setCapability(RSC_32BIT_INDEX);
 
@@ -339,7 +328,6 @@ namespace Ogre {
             checkExtension("GL_KHR_texture_compression_astc_ldr"))
             rsc->setCapability(RSC_TEXTURE_COMPRESSION_ASTC);
 
-        rsc->setCapability(RSC_FBO);
         rsc->setCapability(RSC_HWRENDER_TO_TEXTURE);
         // Probe number of draw buffers
         // Only makes sense with FBO support, so probe here
@@ -355,7 +343,6 @@ namespace Ogre {
         rsc->setVertexTextureUnitsShared(true);
 
         // Blending support
-        rsc->setCapability(RSC_BLENDING);
         rsc->setCapability(RSC_ADVANCED_BLEND_OPERATIONS);
 
         // Check for non-power-of-2 texture support
@@ -395,6 +382,7 @@ namespace Ogre {
         rsc->addShaderProfile("glsl");
 
         // Support for specific shader profiles
+        bool limitedOSXCoreProfile = OGRE_PLATFORM == OGRE_PLATFORM_APPLE && hasMinGLVersion(3, 2);
         if (getNativeShadingLanguageVersion() >= 450)
             rsc->addShaderProfile("glsl450");
         if (getNativeShadingLanguageVersion() >= 440)
@@ -411,15 +399,20 @@ namespace Ogre {
             rsc->addShaderProfile("glsl330");
         if (getNativeShadingLanguageVersion() >= 150)
             rsc->addShaderProfile("glsl150");
-        if (getNativeShadingLanguageVersion() >= 140)
+        if (getNativeShadingLanguageVersion() >= 140 && !limitedOSXCoreProfile)
             rsc->addShaderProfile("glsl140");
-        if (getNativeShadingLanguageVersion() >= 130)
+        if (getNativeShadingLanguageVersion() >= 130 && !limitedOSXCoreProfile)
             rsc->addShaderProfile("glsl130");
 
         // FIXME: This isn't working right yet in some rarer cases
         if (hasMinGLVersion(4, 1) || checkExtension("GL_ARB_separate_shader_objects")) {
             rsc->setCapability(RSC_SEPARATE_SHADER_OBJECTS);
             rsc->setCapability(RSC_GLSL_SSO_REDECLARE);
+        }
+
+        // Mesa 11.2 does not behave according to spec and throws a "gl_Position redefined"
+        if(rsc->getDeviceName().find("Mesa") != String::npos) {
+            rsc->unsetCapability(RSC_GLSL_SSO_REDECLARE);
         }
 
         // Vertex/Fragment Programs
@@ -839,72 +832,21 @@ namespace Ogre {
         delete pWin;
     }
 
-    void GL3PlusRenderSystem::_setPointParameters(Real size,
-                                                  bool attenuationEnabled, Real constant, Real linear, Real quadratic,
-                                                  Real minSize, Real maxSize)
-    {
-
-        if (attenuationEnabled)
-        {
-            // Point size is still calculated in pixels even when attenuation is
-            // enabled, which is pretty awkward, since you typically want a viewport
-            // independent size if you're looking for attenuation.
-            // So, scale the point size up by viewport size (this is equivalent to
-            // what D3D does as standard).
-            size = size * mActiveViewport->getActualHeight();
-
-            // XXX: why do I need this for results to be consistent with D3D?
-            // Equations are supposedly the same once you factor in vp height.
-            // Real correction = 0.005;
-            // Scaling required.
-            // float val[4] = {1, 0, 0, 1};
-            // val[1] = linear * correction;
-            // val[2] = quadratic * correction;
-            // val[3] = 1;
-
-            mStateCacheManager->setEnabled(GL_PROGRAM_POINT_SIZE,true);
-        }
-        else
-        {
-            mStateCacheManager->setEnabled(GL_PROGRAM_POINT_SIZE,false);
-        }
-
-         mStateCacheManager->setPointSize(size);
-        //OGRE_CHECK_GL_ERROR(glPointParameterf(GL_POINT_FADE_THRESHOLD_SIZE, 64.0));
-    }
-
-    void GL3PlusRenderSystem::_setPointSpritesEnabled(bool enabled)
-    {
-        // Point sprites are always on in OpenGL 3.2 and up.
-    }
-
     void GL3PlusRenderSystem::_setTexture(size_t stage, bool enabled, const TexturePtr &texPtr)
     {
-        GL3PlusTexturePtr tex = static_pointer_cast<GL3PlusTexture>(texPtr);
-
         if (!mStateCacheManager->activateGLTextureUnit(stage))
             return;
 
         if (enabled)
         {
-            if (tex)
-            {
-                // Note used
-                tex->touch();
-                mTextureTypes[stage] = tex->getGL3PlusTextureTarget();
-            }
-            else
-                // Assume 2D.
-                mTextureTypes[stage] = GL_TEXTURE_2D;
+            GL3PlusTexturePtr tex = static_pointer_cast<GL3PlusTexture>(
+                texPtr ? texPtr : mTextureManager->_getWarningTexture());
 
-            if (tex)
-            {
-                mStateCacheManager->bindGLTexture( mTextureTypes[stage], tex->getGLID() );
-            }
-            else
-            {
-                mStateCacheManager->bindGLTexture( mTextureTypes[stage], static_cast<GL3PlusTextureManager*>(mTextureManager)->getWarningTextureID() );
-            }
+            // Note used
+            tex->touch();
+            mTextureTypes[stage] = tex->getGL3PlusTextureTarget();
+
+            mStateCacheManager->bindGLTexture( mTextureTypes[stage], tex->getGLID() );
         }
         else
         {
@@ -1518,20 +1460,11 @@ namespace Ogre {
             numberOfInstances *= getGlobalNumberOfInstances();
         }
 
-        GLSLProgram* program;
-        if (mCurrentCapabilities->hasCapability(RSC_SEPARATE_SHADER_OBJECTS))
-        {
-            program = GLSLSeparableProgramManager::getSingleton().getCurrentSeparableProgram();
-        }
-        else
-        {
-            program = GLSLMonolithicProgramManager::getSingleton().getActiveMonolithicProgram();
-        }
+        GLSLProgram* program = GLSLProgramManager::getSingleton().getActiveProgram();
 
         if (!program)
         {
-            LogManager::getSingleton().logMessage("ERROR: Failed to create shader program.",
-                                                  LML_CRITICAL);
+            LogManager::getSingleton().logError("Failed to create shader program.");
         }
 
         GLVertexArrayObject* vao =
@@ -1728,9 +1661,9 @@ namespace Ogre {
             } while (updatePassIterationRenderState());
         }
 
-        // Unbind the vertex array object.
-        // Marks the end of what state will be included.
-        mStateCacheManager->bindGLVertexArray(0);
+        // Do not unbind the vertex array object
+        // VAOs > 0 are selected each time before usage
+        // VAO #0 is not supported in Core profiles, and WOULD NOT be used by Ogre even in compatibility profiles
     }
 
     void GL3PlusRenderSystem::setScissorTest(bool enabled, size_t left,
@@ -1944,6 +1877,18 @@ namespace Ogre {
     {
         static_cast<GL3PlusHardwareBufferManager*>(HardwareBufferManager::getSingletonPtr())->notifyContextDestroyed(context);
 
+        for(RenderTargetMap::iterator it = mRenderTargets.begin(); it!=mRenderTargets.end(); ++it)
+        {
+            RenderTarget* target = it->second;
+            if(target)
+            {
+                GL3PlusFrameBufferObject *fbo = 0;
+                target->getCustomAttribute("FBO", &fbo);
+                if(fbo)
+                    fbo->notifyContextDestroyed(context);
+            }
+        }
+        
         if (mCurrentContext == context)
         {
             // Change the context to something else so that a valid context
@@ -1977,6 +1922,14 @@ namespace Ogre {
             context->_getVaoDeferredForDestruction().push_back(vao);
         else
             OGRE_CHECK_GL_ERROR(glDeleteVertexArrays(1, &vao));
+    }
+
+    void GL3PlusRenderSystem::_destroyFbo(GLContext* context, uint32 fbo)
+    {
+        if(context != mCurrentContext)
+            context->_getFboDeferredForDestruction().push_back(fbo);
+        else
+            _getStateCacheManager()->deleteGLFrameBuffer(GL_FRAMEBUFFER, fbo);
     }
 
     void GL3PlusRenderSystem::_bindVao(GLContext* context, uint32 vao)
@@ -2024,6 +1977,21 @@ namespace Ogre {
             OGRE_CHECK_GL_ERROR(glDebugMessageCallbackARB(&GLDebugCallback, NULL));
             OGRE_CHECK_GL_ERROR(glDebugMessageControlARB(GL_DEBUG_SOURCE_THIRD_PARTY, GL_DEBUG_TYPE_OTHER, GL_DONT_CARE, 0, NULL, GL_TRUE));
 #endif
+        }
+
+        if(hasMinGLVersion(4, 3) || checkExtension("GL_ARB_ES3_compatibility"))
+        {
+            OGRE_CHECK_GL_ERROR(glEnable(GL_PRIMITIVE_RESTART_FIXED_INDEX));
+        }
+
+        glEnable(GL_PROGRAM_POINT_SIZE);
+
+        if(getCapabilities()->getVendor() == GPU_NVIDIA)
+        {
+            // bug in NVIDIA driver, see e.g.
+            // https://www.opengl.org/discussion_boards/showthread.php/168217-gl_PointCoord-and-OpenGL-3-1-GLSL-1-4
+            glEnable(0x8861); // GL_POINT_SPRITE
+            glGetError();     // clear the error that it generates nevertheless..
         }
     }
 
@@ -2489,11 +2457,6 @@ namespace Ogre {
     {
         VertexElementSemantic sem = elem.getSemantic();
         unsigned short elemIndex = elem.getIndex();
-
-        if (!GLSLProgramCommon::isAttributeValid(sem, elemIndex))
-        {
-            return;
-        }
 
         GLuint attrib = (GLuint)GLSLProgramCommon::getFixedAttributeIndex(sem, elemIndex);
 

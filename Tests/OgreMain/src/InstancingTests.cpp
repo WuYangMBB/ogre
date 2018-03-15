@@ -36,7 +36,7 @@ using namespace Ogre;
 typedef RootWithoutRenderSystemFixture Instancing;
 
 TEST_F(Instancing, Bounds) {
-    SceneManager* sceneMgr = SceneManagerEnumerator::getSingleton().createSceneManager(ST_GENERIC);
+    SceneManager* sceneMgr = mRoot->createSceneManager();
     Entity* entity = sceneMgr->createEntity("robot.mesh");
 
     MeshPtr mesh = entity->getMesh();
@@ -51,9 +51,6 @@ TEST_F(Instancing, Bounds) {
 
     EXPECT_EQ(instanced_entity.getBoundingBox(), entity->getBoundingBox());
     EXPECT_EQ(instanced_entity.getBoundingRadius(), entity->getBoundingRadius());
-
-    sceneMgr->destroyEntity(entity);
-    MeshManager::getSingleton().remove(mesh->getHandle());
 }
 
 

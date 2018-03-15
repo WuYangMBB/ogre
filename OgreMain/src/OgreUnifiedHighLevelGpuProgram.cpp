@@ -27,7 +27,6 @@ THE SOFTWARE.
 */
 #include "OgreStableHeaders.h"
 #include "OgreUnifiedHighLevelGpuProgram.h"
-#include "OgreException.h"
 #include "OgreGpuProgramManager.h"
 
 namespace Ogre
@@ -95,17 +94,24 @@ namespace Ogre
                     *i, ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME);
 
             // Silently ignore missing links
-            if(deleg && deleg->isSupported())
+            if(!deleg || !deleg->isSupported())
+                continue;
+
+            if (deleg->getType() != getType())
             {
-                int priority = getPriority(deleg->getLanguage());
-                //Find the delegate with the highest prioriry
-                if (priority >= tmpPriority)
-                {
-                    tmpDelegate = deleg;
-                    tmpPriority = priority;
-                }
+                LogManager::getSingleton().logError(
+                    "unified program '" + getName() +
+                    "' delegating to program with different type '" + *i + "'");
+                continue;
             }
 
+            int priority = getPriority(deleg->getLanguage());
+            //Find the delegate with the highest prioriry
+            if (priority >= tmpPriority)
+            {
+                tmpDelegate = deleg;
+                tmpPriority = priority;
+            }
         }
 
         mChosenDelegate = tmpDelegate;
@@ -185,7 +191,7 @@ namespace Ogre
     bool UnifiedHighLevelGpuProgram::isSupported(void) const
     {
         // Supported if one of the delegates is
-        return (bool)_getDelegate();
+        return _getDelegate().get() != 0;
     }
     //-----------------------------------------------------------------------
     bool UnifiedHighLevelGpuProgram::isSkeletalAnimationIncluded(void) const

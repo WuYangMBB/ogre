@@ -30,12 +30,12 @@ THE SOFTWARE.
 
 #include "OgrePrerequisites.h"
 #ifdef __MINGW32__
-#  include "WIN32/OgreMinGWSupport.h" // extra defines for MinGW to deal with DX SDK
+#  include "OgreMinGWSupport.h" // extra defines for MinGW to deal with DX SDK
 #endif
 
 #include "Threading/OgreThreadHeaders.h"
 
-#if OGRE_THREAD_SUPPORT
+#if OGRE_THREAD_SUPPORT == 1 || OGRE_THREAD_SUPPORT == 2
 #   define OGRE_LOCK_RECURSIVE_MUTEX(name)   name.lock();
 #   define OGRE_UNLOCK_RECURSIVE_MUTEX(name) name.unlock();
 #else

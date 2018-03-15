@@ -86,18 +86,21 @@ bool AdvancedRenderControls::keyPressed(const KeyboardEvent& evt) {
         Ogre::TextureFilterOptions tfo;
         unsigned int aniso;
 
+        Ogre::FilterOptions mip = Ogre::MaterialManager::getSingleton().getDefaultTextureFiltering(Ogre::FT_MIP);
+
         switch (Ogre::MaterialManager::getSingleton().getDefaultTextureFiltering(Ogre::FT_MAG)) {
-        case Ogre::TFO_BILINEAR:
-            newVal = "Trilinear";
-            tfo = Ogre::TFO_TRILINEAR;
-            aniso = 1;
+        case Ogre::FO_LINEAR:
+            if (mip == Ogre::FO_POINT) {
+                newVal = "Trilinear";
+                tfo = Ogre::TFO_TRILINEAR;
+                aniso = 1;
+            } else {
+                newVal = "Anisotropic";
+                tfo = Ogre::TFO_ANISOTROPIC;
+                aniso = 8;
+            }
             break;
-        case Ogre::TFO_TRILINEAR:
-            newVal = "Anisotropic";
-            tfo = Ogre::TFO_ANISOTROPIC;
-            aniso = 8;
-            break;
-        case Ogre::TFO_ANISOTROPIC:
+        case Ogre::FO_ANISOTROPIC:
             newVal = "None";
             tfo = Ogre::TFO_NONE;
             aniso = 1;
@@ -167,10 +170,12 @@ bool AdvancedRenderControls::keyPressed(const KeyboardEvent& evt) {
             }
         }
     }
+#   ifdef RTSHADER_SYSTEM_BUILD_EXT_SHADERS
     // Toggles per pixel per light model.
     else if (key == SDLK_F3) {
         static bool usePerPixelLighting = true;
 
+        //![rtss_per_pixel]
         // Grab the scheme render state.
         Ogre::RTShader::RenderState* schemRenderState =
             mShaderGenerator->getRenderState(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
@@ -183,6 +188,7 @@ bool AdvancedRenderControls::keyPressed(const KeyboardEvent& evt) {
 
             schemRenderState->addTemplateSubRenderState(perPixelLightModel);
         }
+        //![rtss_per_pixel]
 
         // Search the per pixel sub render state and remove it.
         else {
@@ -213,7 +219,7 @@ bool AdvancedRenderControls::keyPressed(const KeyboardEvent& evt) {
             mDetailsPanel->setParamValue(12, "Vertex");
         usePerPixelLighting = !usePerPixelLighting;
     }
-
+#   endif
     // Switch vertex shader outputs compaction policy.
     else if (key == SDLK_F4) {
         switch (mShaderGenerator->getVertexShaderOutputsCompactPolicy()) {

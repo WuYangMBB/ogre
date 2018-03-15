@@ -26,15 +26,9 @@ THE SOFTWARE.
 -----------------------------------------------------------------------------
 */
 #include "OgreStableHeaders.h"
-#include "OgreCamera.h"
 
-#include "OgreSceneManager.h"
-#include "OgreProfiler.h"
-#include "OgreMatrix4.h"
-#include "OgreRay.h"
 #include "OgreViewport.h"
 #include "OgreMovablePlane.h"
-#include "OgreSceneNode.h"
 
 namespace Ogre {
 
@@ -74,7 +68,7 @@ namespace Ogre {
         invalidateView();
 
         // Init matrices
-        mViewMatrix = Matrix4::ZERO;
+        mViewMatrix = Affine3::ZERO;
         mProjMatrixRS = Matrix4::ZERO;
 
         mParentNode = 0;
@@ -373,7 +367,7 @@ namespace Ogre {
                 mDerivedOrientation = dir.getRotationTo(rdir, up) * mRealOrientation;
 
                 // Calculate reflected position.
-                mDerivedPosition = mReflectMatrix.transformAffine(mRealPosition);
+                mDerivedPosition = mReflectMatrix * mRealPosition;
             }
             else
             {
@@ -410,7 +404,7 @@ namespace Ogre {
         }
         else
         {
-            mPixelDisplayRatio = (mTop - mBottom) / vp->getActualHeight();
+            mPixelDisplayRatio = -mExtents.height() / vp->getActualHeight();
         }
 
         //notify prerender scene
@@ -611,7 +605,7 @@ namespace Ogre {
         // NB assumes that all scene nodes have been updated
         if (mAutoTrackTarget)
         {
-            lookAt(mAutoTrackTarget->_getFullTransform().transformAffine(mAutoTrackOffset));
+            lookAt(mAutoTrackTarget->_getFullTransform() * mAutoTrackOffset);
         }
     }
     //-----------------------------------------------------------------------
@@ -783,28 +777,27 @@ namespace Ogre {
             return;
 
         // Calculate general projection parameters
-        Real vpLeft, vpRight, vpBottom, vpTop;
-        calcProjectionParameters(vpLeft, vpRight, vpBottom, vpTop);
+        RealRect vp = calcProjectionParameters();
 
-        Real vpWidth = vpRight - vpLeft;
-        Real vpHeight = vpTop - vpBottom;
+        Real vpWidth = vp.width();
+        Real vpHeight = -vp.height();
 
-        Real wvpLeft   = vpLeft + mWLeft * vpWidth;
-        Real wvpRight  = vpLeft + mWRight * vpWidth;
-        Real wvpTop    = vpTop - mWTop * vpHeight;
-        Real wvpBottom = vpTop - mWBottom * vpHeight;
+        Real wvpLeft   = vp.left + mWLeft * vpWidth;
+        Real wvpRight  = vp.left + mWRight * vpWidth;
+        Real wvpTop    = vp.top - mWTop * vpHeight;
+        Real wvpBottom = vp.top - mWBottom * vpHeight;
 
         Vector3 vp_ul (wvpLeft, wvpTop, -mNearDist);
         Vector3 vp_ur (wvpRight, wvpTop, -mNearDist);
         Vector3 vp_bl (wvpLeft, wvpBottom, -mNearDist);
         Vector3 vp_br (wvpRight, wvpBottom, -mNearDist);
 
-        Matrix4 inv = mViewMatrix.inverseAffine();
+        Affine3 inv = mViewMatrix.inverse();
 
-        Vector3 vw_ul = inv.transformAffine(vp_ul);
-        Vector3 vw_ur = inv.transformAffine(vp_ur);
-        Vector3 vw_bl = inv.transformAffine(vp_bl);
-        Vector3 vw_br = inv.transformAffine(vp_br);
+        Vector3 vw_ul = inv * vp_ul;
+        Vector3 vw_ur = inv * vp_ur;
+        Vector3 vw_bl = inv * vp_bl;
+        Vector3 vw_br = inv * vp_br;
 
         mWindowClipPlanes.clear();
         if (mProjType == PT_PERSPECTIVE)
@@ -964,7 +957,7 @@ namespace Ogre {
         }
     }
     //-----------------------------------------------------------------------
-    const Matrix4& Camera::getViewMatrix(void) const
+    const Affine3& Camera::getViewMatrix(void) const
     {
         if (mCullFrustum)
         {
@@ -976,7 +969,7 @@ namespace Ogre {
         }
     }
     //-----------------------------------------------------------------------
-    const Matrix4& Camera::getViewMatrix(bool ownFrustumOnly) const
+    const Affine3& Camera::getViewMatrix(bool ownFrustumOnly) const
     {
         if (ownFrustumOnly)
         {

@@ -27,12 +27,7 @@ THE SOFTWARE.
 */
 #include "OgreStableHeaders.h"
 #include "OgreHardwareVertexBuffer.h"
-#include "OgreColourValue.h"
-#include "OgreException.h"
-#include "OgreHardwareBufferManager.h"
 #include "OgreDefaultHardwareBufferManager.h"
-#include "OgreRoot.h"
-#include "OgreRenderSystem.h"
 
 namespace Ogre {
 
@@ -53,8 +48,8 @@ namespace Ogre {
         // Create a shadow buffer if required
         if (mUseShadowBuffer)
         {
-            mShadowBuffer = OGRE_NEW DefaultHardwareVertexBuffer(mMgr, mVertexSize, 
-                    mNumVertices, HardwareBuffer::HBU_DYNAMIC);
+            mShadowBuffer.reset(new DefaultHardwareVertexBuffer(mMgr, mVertexSize,
+                    mNumVertices, HardwareBuffer::HBU_DYNAMIC));
         }
 
     }
@@ -65,7 +60,6 @@ namespace Ogre {
         {
             mMgr->_notifyVertexBufferDestroyed(this);
         }
-        OGRE_DELETE mShadowBuffer;
     }
     //-----------------------------------------------------------------------------
     bool HardwareVertexBuffer::checkIfVertexInstanceDataIsSupported()

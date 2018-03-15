@@ -31,7 +31,6 @@ THE SOFTWARE.
 #include "OgreEAGLES2Context.h"
 
 #include "OgreRoot.h"
-#include "OgreWindowEventUtilities.h"
 #include "OgreGLES2RenderSystem.h"
 #include "OgreGLES2PixelFormat.h"
 #include "OgreViewport.h"
@@ -97,9 +96,7 @@ namespace Ogre {
         mActive = false;
 
         if (!mIsExternal)
-        {
-            WindowEventUtilities::_removeRenderWindow(this);
-        
+        {        
             SAFE_ARC_RELEASE(mWindow);
             mWindow = nil;
         }
@@ -180,7 +177,7 @@ namespace Ogre {
             mWindow = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, widthPt, heightPt)];
         }
         
-        OgreAssert(mWindow != nil, "EAGL2Window: Failed to create native window");
+        OgreAssert(mWindow || mUsingExternalViewController, "EAGL2Window: Failed to obtain required native window");
         
         // Set up the view
         if(!mUsingExternalView)
@@ -248,19 +245,17 @@ namespace Ogre {
         
         OgreAssert(mContext != nil, "EAGL2Window: Failed to create OpenGL ES context");
 
-        if(!mUsingExternalViewController)
-            [mWindow addSubview:mViewController.view];
-        
         mViewController.mGLSupport = mGLSupport;
         
         if(!mUsingExternalViewController)
+        {
+            [mWindow addSubview:mViewController.view];
             mWindow.rootViewController = mViewController;
+            [mWindow makeKeyAndVisible];
+        }
         
         if(!mUsingExternalView)
             SAFE_ARC_RELEASE(mView);
-    
-        if(!mUsingExternalViewController)
-            [mWindow makeKeyAndVisible];
         
         // Obtain effective view size and scale
         CGSize sz = mView.frame.size;

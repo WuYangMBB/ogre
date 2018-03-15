@@ -26,10 +26,7 @@ THE SOFTWARE.
 -----------------------------------------------------------------------------
 */
 
-#include "OgreShaderCGProgramWriter.h"
-#include "OgreShaderFunctionAtom.h"
-#include "OgreShaderProgram.h"
-#include "OgreStringConverter.h"
+#include "OgreShaderPrecompiledHeaders.h"
 
 namespace Ogre {
 namespace RTShader {
@@ -137,9 +134,6 @@ void CGProgramWriter::writeSourceCode(std::ostream& os, Program* program)
             writeLocalParameter(os, *itParam);          
             os << ";" << std::endl;                     
         }
-
-        // Sort and write function atoms.
-        curFunction->sortAtomInstances();
 
         const FunctionAtomInstanceList& atomInstances = curFunction->getAtomInstances();
         FunctionAtomInstanceConstIterator itAtom;

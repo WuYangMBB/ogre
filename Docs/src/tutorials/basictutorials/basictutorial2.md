@@ -125,12 +125,6 @@ The spotlight requires both a position and a direction - remember it acts like a
 
 @snippet Samples/Tutorials/BasicTutorial2.cpp spotlightposrot
 
-@note You must be wondering why we call setDirection for light source and then call the same method for related
-SceneNode. As long as setDirection is deprecated for Light it has to be attached to SceneNode. Since SceneNode
-default rotation is NEGATIVE\_UNIT\_Z we need to set same value for Light. Direction for light by default is not
-NEGATIVE\_UNIT\_Z but in the future releases it will be replaced with this value. So this extra call
-of setDirection for Light could be deleted in future. In other words we need this extra move for future compatibilty.
-
 ![](bt2_light_dir_1.png)
 
 Finally, we set what is called the spotlight range. These are the angles that determine where the light fades from bright in the middle to dimmer on the outside edges.
@@ -182,7 +176,7 @@ Try experimenting with the different shadow types. There are also other shadow-r
 
 Ogre does not provide soft shadows as part of the engine. You can write your own vertex and fragment programs to implement soft shadows and many other things. The Ogre Manual has a full description of @ref Shadows.
 
-# Conclusion {#Conclusion}
+# Conclusion {#Conclusion2}
 
 This tutorial introduced the use of lights and shadows into the scene. To begin, we covered how to use the MeshManager to generate meshes from scratch. We then chose which shadow type Ogre should use. Finally, we begin adding an example of each type of Light to our scene. We created a spotlight, a directional light, and a point light. You can even extend Ogre's lighting and shadow systems by writing your own vertex and fragment programs. Refer to the Ogre Manual for more details.
 

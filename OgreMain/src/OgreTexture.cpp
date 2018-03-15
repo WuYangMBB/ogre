@@ -26,12 +26,9 @@ THE SOFTWARE.
 -----------------------------------------------------------------------------
 */
 #include "OgreStableHeaders.h"
-#include "OgreLogManager.h"
 #include "OgreHardwarePixelBuffer.h"
 #include "OgreImage.h"
 #include "OgreTexture.h"
-#include "OgreException.h"
-#include "OgreTextureManager.h"
 
 namespace Ogre {
     const char* Texture::CUBEMAP_SUFFIXES[] = {"_rt", "_lf", "_up", "_dn", "_fr", "_bk"};
@@ -313,7 +310,7 @@ namespace Ogre {
                     PixelBox corrected = PixelBox(src.getWidth(), src.getHeight(), src.getDepth(), src.format, buf.getPtr());
                     PixelUtil::bulkPixelConversion(src, corrected);
                     
-                    Image::applyGamma(static_cast<uint8*>(corrected.data), mGamma, corrected.getConsecutiveSize(), 
+                    Image::applyGamma(corrected.data, mGamma, corrected.getConsecutiveSize(),
                         static_cast<uchar>(PixelUtil::getNumElemBits(src.format)));
     
                     // Destination: entire texture. blitFromMemory does the scaling to
@@ -382,7 +379,7 @@ namespace Ogre {
         if (mName.empty())
             return BLANKSTRING;
 
-        String::size_type pos = mName.find_last_of(".");
+        String::size_type pos = mName.find_last_of('.');
         if (pos != String::npos && pos < (mName.length() - 1))
         {
             String ext = mName.substr(pos+1);

@@ -27,21 +27,7 @@ THE SOFTWARE.
 */
 #include "OgreStableHeaders.h"
 
-#include "OgreCommon.h"
 #include "OgreStreamSerialiser.h"
-#include "OgreBitwise.h"
-#include "OgreException.h"
-#include "OgreLogManager.h"
-#include "OgreVector2.h"
-#include "OgreVector3.h"
-#include "OgreVector4.h"
-#include "OgreMatrix3.h"
-#include "OgreMatrix4.h"
-#include "OgreQuaternion.h"
-#include "OgreAxisAlignedBox.h"
-#include "OgreNode.h"
-#include "OgreRay.h"
-#include "OgreSphere.h"
 #include "OgreDeflate.h"
 
 namespace Ogre
@@ -147,7 +133,7 @@ namespace Ogre
         // really this should be empty if read/write was complete, but be tidy
         if (!mChunkStack.empty())
         {
-            LogManager::getSingleton().stream() <<
+            LogManager::getSingleton().stream(LML_WARNING) <<
                 "Warning: stream " << mStream->getName() << " was not fully read / written; " <<
                 mChunkStack.size() << " chunks remain unterminated.";
         }
@@ -157,14 +143,12 @@ namespace Ogre
 
     }
     //---------------------------------------------------------------------
-    uint32 StreamSerialiser::makeIdentifier(const String& code)
+    uint32 StreamSerialiser::makeIdentifier(const char (&code)[5])
     {
-        assert(code.length() <= 4 && "Characters after the 4th are being ignored");
         uint32 ret = 0;
-        size_t c = std::min((size_t)4, code.length());
-        for (size_t i = 0; i < c; ++i)
+        for (size_t i = 0; i < 4; ++i)
         {
-            ret += (code.at(i) << (i * 8));
+            ret += (code[i] << (i * 8));
         }
         return ret;
 
@@ -208,7 +192,7 @@ namespace Ogre
         }
         else if (c->version > maxVersion)
         {
-            LogManager::getSingleton().stream() << "Error: " << msg 
+            LogManager::getSingleton().stream(LML_CRITICAL) << "Error: " << msg
                 << " : Data version is " << c->version << " but this software can only read "
                 << "up to version " << maxVersion;
             // skip

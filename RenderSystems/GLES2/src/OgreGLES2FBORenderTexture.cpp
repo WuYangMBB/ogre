@@ -54,17 +54,14 @@ namespace Ogre {
     
     void GLES2FBORenderTexture::getCustomAttribute(const String& name, void* pData)
     {
-        if(name=="FBO")
+        if(name == GLRenderTexture::CustomAttributeString_FBO)
         {
             *static_cast<GLES2FrameBufferObject **>(pData) = &mFB;
         }
-        
-        if( name == "GLCONTEXT" )
+        else if(name == GLRenderTexture::CustomAttributeString_GLCONTEXT)
         {
             *static_cast<GLContext**>(pData) = mFB.getContext();
-            return;
         }
-
     }
 
     void GLES2FBORenderTexture::swapBuffers()
@@ -170,7 +167,7 @@ namespace Ogre {
     {
         if(!mRenderBufferMap.empty())
         {
-            LogManager::getSingleton().logMessage("GL ES 2: Warning! GLES2FBOManager destructor called, but not all renderbuffers were released.");
+            LogManager::getSingleton().logWarning("GLES2FBOManager destructor called, but not all renderbuffers were released.");
         }
         
         OGRE_CHECK_GL_ERROR(glDeleteFramebuffers(1, &mTempFBO));
@@ -310,6 +307,8 @@ namespace Ogre {
     void GLES2FBOManager::detectFBOFormats()
     {
 #if OGRE_PLATFORM == OGRE_PLATFORM_EMSCRIPTEN
+        memset(mProps, 0, sizeof(mProps));
+
         // TODO: Fix that probing all formats slows down startup not just on the web also on Android / iOS
         mProps[PF_A8B8G8R8].valid = true;
         FormatProperties::Mode mode = {1, 0};
@@ -510,7 +509,7 @@ namespace Ogre {
         GLES2FrameBufferObject *fbo = 0;
         target->getCustomAttribute("FBO", &fbo);
         if(fbo)
-            fbo->bind();
+            fbo->bind(true);
             // Old style context (window/pbuffer) or copying render texture
 #if OGRE_PLATFORM == OGRE_PLATFORM_APPLE_IOS
         else

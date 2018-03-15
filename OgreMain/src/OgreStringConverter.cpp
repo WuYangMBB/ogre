@@ -26,9 +26,6 @@ THE SOFTWARE.
 -----------------------------------------------------------------------------
 */
 #include "OgreStableHeaders.h"
-#include "OgreStringConverter.h"
-#include "OgreException.h"
-#include "OgrePlatform.h"
 
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32 || OGRE_PLATFORM == OGRE_PLATFORM_WINRT
 #   define LC_NUMERIC_MASK LC_NUMERIC
@@ -94,7 +91,7 @@ namespace Ogre {
     {
         return _toString(val, width, fill, flags);
     }
-#if OGRE_PLATFORM != OGRE_PLATFORM_NACL &&  ( OGRE_ARCH_TYPE == OGRE_ARCHITECTURE_64 || OGRE_PLATFORM == OGRE_PLATFORM_APPLE || OGRE_PLATFORM == OGRE_PLATFORM_APPLE_IOS )
+#if OGRE_ARCH_TYPE == OGRE_ARCHITECTURE_64 || OGRE_PLATFORM == OGRE_PLATFORM_APPLE || OGRE_PLATFORM == OGRE_PLATFORM_APPLE_IOS
     //-----------------------------------------------------------------------
     String StringConverter::toString(unsigned int val,
         unsigned short width, char fill, std::ios::fmtflags flags)

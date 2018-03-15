@@ -24,7 +24,6 @@ set(INST_FILES
   Utils/MacroLogFeature.cmake
   Utils/PreprocessorUtils.cmake
   Utils/PrecompiledHeader.cmake
-  Utils/OgreAddTargets.cmake
   Utils/OgreConfigTargets.cmake
   Utils/OgreGetVersion.cmake
   Utils/OgreFindFrameworks.cmake
@@ -43,8 +42,6 @@ set(STATIC_INST_FILES
   Packages/FindDirectX.cmake
   Packages/FindDirectX11.cmake
   Packages/FindFreeImage.cmake
-  Packages/FindFreetype.cmake
-  Packages/FindOpenGLES.cmake
   Packages/FindOpenGLES2.cmake
   Packages/FindZZip.cmake
   Packages/FindSoftimage.cmake

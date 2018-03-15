@@ -47,15 +47,6 @@ namespace Ogre {
     class OverlaySystem;
 }
 
-#if OGRE_PLATFORM == OGRE_PLATFORM_APPLE |OGRE_PLATFORM == OGRE_PLATFORM_APPLE_IOS
-#include "macUtils.h"
-#if OGRE_PLATFORM == OGRE_PLATFORM_APPLE_IOS
-#   ifdef __OBJC__
-#       import <UIKit/UIKit.h>
-#   endif
-#endif
-#endif
-
 #if OGRE_PLATFORM == OGRE_PLATFORM_ANDROID
 #include <android/configuration.h>
 #include <android/asset_manager.h>
@@ -64,7 +55,6 @@ namespace Ogre {
 #endif
 
 #include "OgreInput.h"
-#include "OgreWindowEventUtilities.h"
 
 /** \addtogroup Optional Optional Components
 *  @{
@@ -94,12 +84,10 @@ namespace OgreBites
     Base class responsible for setting up a common context for applications.
     Subclass to implement specific event callbacks.
     */
-    class _OgreBitesExport ApplicationContext :
-            public Ogre::FrameListener,
-            public Ogre::WindowEventListener
+    class _OgreBitesExport ApplicationContext : public Ogre::FrameListener
     {
     public:
-        explicit ApplicationContext(const Ogre::String& appName = OGRE_VERSION_NAME, bool grabInput = true);
+        explicit ApplicationContext(const Ogre::String& appName = OGRE_VERSION_NAME, bool unused = true);
 
         virtual ~ApplicationContext();
 
@@ -194,10 +182,15 @@ namespace OgreBites
         virtual bool oneTimeConfig();
 
         /**
-        Sets up SDL input.
+        When input is grabbed the mouse is confined to the window.
         */
-        virtual void setupInput(bool grab);
+        void setWindowGrab(NativeWindowType* win, bool grab = true);
 
+        /// @overload
+        void setWindowGrab(bool grab = true) {
+            OgreAssert(!mWindows.empty(), "create a window first");
+            setWindowGrab(mWindows[0].native, grab);
+        }
 
         /**
         Finds context-wide resource groups. I load paths from a config file here,
@@ -266,7 +259,7 @@ namespace OgreBites
 
         /// @overload
         void removeInputListener(InputListener* lis) {
-            OgreAssert(!mWindows.empty(), "called after all windows we deleted");
+            OgreAssert(!mWindows.empty(), "called after all windows were deleted");
             removeInputListener(mWindows[0].native, lis);
         }
 
@@ -282,6 +275,12 @@ namespace OgreBites
         createWindow(const Ogre::String& name, uint32_t w = 0, uint32_t h = 0,
                      Ogre::NameValuePairList miscParams = Ogre::NameValuePairList());
 
+        /**
+         * the directory where the media files were installed
+         *
+         * same as OGRE_MEDIA_DIR in CMake
+         */
+        static Ogre::String getDefaultMediaDir();
     protected:
 #if OGRE_PLATFORM == OGRE_PLATFORM_ANDROID
         Ogre::DataStreamPtr openAPKFile(const Ogre::String& fileName);
@@ -298,7 +297,6 @@ namespace OgreBites
         Ogre::FileSystemLayer* mFSLayer; // File system abstraction layer
         Ogre::Root* mRoot;              // OGRE root
         StaticPluginLoader mStaticPluginLoader;
-        bool mGrabInput;
         bool mFirstRun;
         Ogre::String mNextRenderer;     // name of renderer used for next run
         Ogre::String mAppName;

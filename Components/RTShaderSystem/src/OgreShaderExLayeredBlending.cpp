@@ -25,13 +25,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 -----------------------------------------------------------------------------
 */
-#include "OgreShaderExLayeredBlending.h"
+#include "OgreShaderPrecompiledHeaders.h"
 #ifdef RTSHADER_SYSTEM_BUILD_EXT_SHADERS
-#include "OgreShaderFunctionAtom.h"
-#include "OgreShaderProgram.h"
-#include "OgreShaderProgramSet.h"
-#include "OgrePass.h"
-#include "OgreMaterialSerializer.h"
 
 namespace Ogre {
 namespace RTShader {
@@ -172,14 +167,13 @@ void LayeredBlending::addPSBlendInvocations(Function* psMain,
                                          int samplerIndex,
                                          const LayerBlendModeEx& blendMode,
                                          const int groupOrder, 
-                                         int& internalCounter,
                                          int targetChannels)
 {
     //
     // Add the modifier invocation
     //
 
-    addPSModifierInvocation(psMain, samplerIndex, arg1, arg2, groupOrder, internalCounter, targetChannels);
+    addPSModifierInvocation(psMain, samplerIndex, arg1, arg2, groupOrder, targetChannels);
 
     //
     // Add the blending function invocations
@@ -189,7 +183,7 @@ void LayeredBlending::addPSBlendInvocations(Function* psMain,
     
     if ((LB_FFPBlend == mode) || (LB_Invalid == mode))
     {
-        FFPTexturing::addPSBlendInvocations(psMain, arg1, arg2, texel, samplerIndex, blendMode, groupOrder, internalCounter, targetChannels);
+        FFPTexturing::addPSBlendInvocations(psMain, arg1, arg2, texel, samplerIndex, blendMode, groupOrder, targetChannels);
     }
     else 
     {
@@ -207,7 +201,7 @@ void LayeredBlending::addPSBlendInvocations(Function* psMain,
         //add the function of the blend mode
         if (funcName.empty() == false)
         {
-            FunctionInvocation* curFuncInvocation = OGRE_NEW FunctionInvocation(funcName, groupOrder, internalCounter++);
+            FunctionInvocation* curFuncInvocation = OGRE_NEW FunctionInvocation(funcName, groupOrder);
             curFuncInvocation->pushOperand(arg1, Operand::OPS_IN, targetChannels);
             curFuncInvocation->pushOperand(arg2, Operand::OPS_IN, targetChannels);
             curFuncInvocation->pushOperand(mPSOutDiffuse, Operand::OPS_OUT, targetChannels);        
@@ -222,7 +216,6 @@ void LayeredBlending::addPSModifierInvocation(Function* psMain,
                                          ParameterPtr arg1,
                                          ParameterPtr arg2,
                                          const int groupOrder, 
-                                         int& internalCounter,
                                          int targetChannels)
 {
     SourceModifier modType;
@@ -258,7 +251,7 @@ void LayeredBlending::addPSModifierInvocation(Function* psMain,
         {
             ParameterPtr& controlParam = mTextureBlends[samplerIndex].modControlParam;
 
-            FunctionInvocation* curFuncInvocation = OGRE_NEW FunctionInvocation(funcName, groupOrder, internalCounter++);
+            FunctionInvocation* curFuncInvocation = OGRE_NEW FunctionInvocation(funcName, groupOrder);
             curFuncInvocation->pushOperand(modifiedParam, Operand::OPS_IN, targetChannels);
             curFuncInvocation->pushOperand(controlParam, Operand::OPS_IN, targetChannels);
             curFuncInvocation->pushOperand(modifiedParam, Operand::OPS_OUT, targetChannels);        

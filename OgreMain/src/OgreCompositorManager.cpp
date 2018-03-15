@@ -32,9 +32,6 @@ THE SOFTWARE.
 #include "OgreCompositionPass.h"
 #include "OgreCompositionTargetPass.h"
 #include "OgreCompositionTechnique.h"
-#include "OgreRoot.h"
-#include "OgreScriptCompiler.h"
-#include "OgreTextureManager.h"
 #include "OgreRectangle2D.h"
 #include "OgreRenderTarget.h"
 
@@ -341,10 +338,11 @@ TexturePtr CompositorManager::getPooledTexture(const String& name,
 //---------------------------------------------------------------------
 bool CompositorManager::isInputPreviousTarget(CompositorInstance* inst, const Ogre::String& localName)
 {
-    CompositionTechnique::TargetPassIterator tpit = inst->getTechnique()->getTargetPassIterator();
-    while(tpit.hasMoreElements())
+    const CompositionTechnique::TargetPasses& passes = inst->getTechnique()->getTargetPasses();
+    CompositionTechnique::TargetPasses::const_iterator it;
+    for (it = passes.begin(); it != passes.end(); ++it)
     {
-        CompositionTargetPass* tp = tpit.getNext();
+        CompositionTargetPass* tp = *it;
         if (tp->getInputMode() == CompositionTargetPass::IM_PREVIOUS &&
             tp->getOutputName() == localName)
         {
@@ -359,10 +357,11 @@ bool CompositorManager::isInputPreviousTarget(CompositorInstance* inst, const Og
 //---------------------------------------------------------------------
 bool CompositorManager::isInputPreviousTarget(CompositorInstance* inst, TexturePtr tex)
 {
-    CompositionTechnique::TargetPassIterator tpit = inst->getTechnique()->getTargetPassIterator();
-    while(tpit.hasMoreElements())
+    const CompositionTechnique::TargetPasses& passes = inst->getTechnique()->getTargetPasses();
+    CompositionTechnique::TargetPasses::const_iterator it;
+    for (it = passes.begin(); it != passes.end(); ++it)
     {
-        CompositionTargetPass* tp = tpit.getNext();
+        CompositionTargetPass* tp = *it;
         if (tp->getInputMode() == CompositionTargetPass::IM_PREVIOUS)
         {
             // Don't have to worry about an MRT, because no MRT can be input previous
@@ -380,11 +379,11 @@ bool CompositorManager::isInputPreviousTarget(CompositorInstance* inst, TextureP
 bool CompositorManager::isInputToOutputTarget(CompositorInstance* inst, const Ogre::String& localName)
 {
     CompositionTargetPass* tp = inst->getTechnique()->getOutputTargetPass();
-    CompositionTargetPass::PassIterator pit = tp->getPassIterator();
+    CompositionTargetPass::Passes::const_iterator pit = tp->getPasses().begin();
 
-    while(pit.hasMoreElements())
+    for (;pit != tp->getPasses().end(); ++pit)
     {
-        CompositionPass* p = pit.getNext();
+        CompositionPass* p = *pit;
         for (size_t i = 0; i < p->getNumInputs(); ++i)
         {
             if (p->getInput(i).name == localName)
@@ -399,11 +398,11 @@ bool CompositorManager::isInputToOutputTarget(CompositorInstance* inst, const Og
 bool CompositorManager::isInputToOutputTarget(CompositorInstance* inst, TexturePtr tex)
 {
     CompositionTargetPass* tp = inst->getTechnique()->getOutputTargetPass();
-    CompositionTargetPass::PassIterator pit = tp->getPassIterator();
+    CompositionTargetPass::Passes::const_iterator pit = tp->getPasses().begin();
 
-    while(pit.hasMoreElements())
+    for (;pit != tp->getPasses().end(); ++pit)
     {
-        CompositionPass* p = pit.getNext();
+        CompositionPass* p = *pit;
         for (size_t i = 0; i < p->getNumInputs(); ++i)
         {
             TexturePtr t = inst->getTextureInstance(p->getInput(i).name, 0);

@@ -26,10 +26,8 @@
  -----------------------------------------------------------------------------
  */
 
-#include "OgreStableHeaders.h"
 #include "OgreGLES2StateCacheManager.h"
 #include "OgreGLES2RenderSystem.h"
-#include "OgreLogManager.h"
 #include "OgreRoot.h"
 
 namespace Ogre {
@@ -445,36 +443,6 @@ namespace Ogre {
         }
 #else
         OGRE_CHECK_GL_ERROR(glDisable(flag));
-#endif
-    }
-
-    void GLES2StateCacheManager::setVertexAttribEnabled(GLuint attrib)
-    {
-#ifdef OGRE_ENABLE_STATE_CACHE
-        bool found = std::find(mEnabledVertexAttribs.begin(), mEnabledVertexAttribs.end(), attrib) != mEnabledVertexAttribs.end();
-        if(!found)
-        {
-            mEnabledVertexAttribs.push_back(attrib);
-
-            OGRE_CHECK_GL_ERROR(glEnableVertexAttribArray(attrib));
-        }
-#else
-        OGRE_CHECK_GL_ERROR(glEnableVertexAttribArray(attrib));
-#endif
-    }
-
-    void GLES2StateCacheManager::setVertexAttribDisabled(GLuint attrib)
-    {
-#ifdef OGRE_ENABLE_STATE_CACHE
-        vector<GLuint>::iterator iter = std::find(mEnabledVertexAttribs.begin(), mEnabledVertexAttribs.end(), attrib);
-        if(iter != mEnabledVertexAttribs.end())
-        {
-            mEnabledVertexAttribs.erase(iter);
-
-            OGRE_CHECK_GL_ERROR(glDisableVertexAttribArray(attrib));
-        }
-#else
-        OGRE_CHECK_GL_ERROR(glDisableVertexAttribArray(attrib));
 #endif
     }
 

@@ -95,7 +95,7 @@ namespace Ogre {
         mLevel.reset();
         // Check extension is .bsp
         char extension[6];
-        size_t pos = filename.find_last_of(".");
+        size_t pos = filename.find_last_of('.');
         if( pos == String::npos )
             OGRE_EXCEPT(
                 Exception::ERR_INVALIDPARAMS,
@@ -276,7 +276,7 @@ namespace Ogre {
                 {
                     mAutoParamDataSource->setCurrentRenderable(0);
                     mAutoParamDataSource->setCurrentSceneManager(this);
-                    mAutoParamDataSource->setWorldMatrices(&Matrix4::IDENTITY, 1);
+                    mAutoParamDataSource->setWorldMatrices(&Affine3::IDENTITY, 1);
                     mAutoParamDataSource->setCurrentCamera(mCameraInProgress, false);
                     updateGpuProgramParameters(pass);
                 }
@@ -957,8 +957,6 @@ namespace Ogre {
     void BspSceneManagerFactory::initMetaData(void) const
     {
         mMetaData.typeName = FACTORY_TYPE_NAME;
-        mMetaData.description = "Scene manager for loading Quake3 .bsp files.";
-        mMetaData.sceneTypeMask = ST_INTERIOR;
         mMetaData.worldGeometrySupported = true;
     }
     //-----------------------------------------------------------------------

@@ -28,13 +28,8 @@ THE SOFTWARE.
 
 #include "OgreStableHeaders.h"
 #include "OgreScriptTranslator.h"
-#include "OgreLogManager.h"
-#include "OgreMaterialManager.h"
-#include "OgreTechnique.h"
-#include "OgrePass.h"
 #include "OgreGpuProgramManager.h"
 #include "OgreHighLevelGpuProgramManager.h"
-#include "OgreParticleSystemManager.h"
 #include "OgreParticleSystemRenderer.h"
 #include "OgreParticleEmitter.h"
 #include "OgreParticleAffector.h"
@@ -48,7 +43,6 @@ THE SOFTWARE.
 #include "OgreDistanceLodStrategy.h"
 #include "OgreDepthBuffer.h"
 #include "OgreParticleSystem.h"
-#include "OgreRoot.h"
 #include "OgreHighLevelGpuProgram.h"
 
 namespace Ogre{
@@ -510,19 +504,6 @@ namespace Ogre{
 
             *op = (GpuConstantType)(GCT_DOUBLE1 + count - 1);
         }
-        else if (val.find("int") != String::npos)
-        {
-            int count = 1;
-            if (val.size() == 4)
-                count = StringConverter::parseInt(val.substr(3));
-            else if (val.size() > 4)
-                return false;
-
-            if (count > 4 || count == 0)
-                return false;
-
-            *op = (GpuConstantType)(GCT_INT1 + count - 1);
-        }
         else if (val.find("uint") != String::npos)
         {
             int count = 1;
@@ -535,6 +516,19 @@ namespace Ogre{
                 return false;
 
             *op = (GpuConstantType)(GCT_UINT1 + count - 1);
+        }
+        else if (val.find("int") != String::npos)
+        {
+            int count = 1;
+            if (val.size() == 4)
+                count = StringConverter::parseInt(val.substr(3));
+            else if (val.size() > 4)
+                return false;
+
+            if (count > 4 || count == 0)
+                return false;
+
+            *op = (GpuConstantType)(GCT_INT1 + count - 1);
         }
         else if (val.find("bool") != String::npos)
         {
@@ -603,6 +597,9 @@ namespace Ogre{
         if(!processed)
         {
             mMaterial = MaterialManager::getSingleton().create(obj->name, compiler->getResourceGroup()).get();
+
+            if(!mMaterial) // duplicate definition resolved by "use previous"
+                return;
         }
         else
         {
@@ -2735,6 +2732,7 @@ namespace Ogre{
                                                 texType = TEX_TYPE_1D;
                                                 break;
                                             }
+                                            OGRE_FALLTHROUGH;
                                         }                                                                       case ID_2D:
                                         texType = TEX_TYPE_2D;
                                         break;
@@ -4565,7 +4563,7 @@ namespace Ogre{
 
         if (start != String::npos)
         {
-            size_t end = declarator.find_first_of("[", start);
+            size_t end = declarator.find_first_of('[', start);
 
             // int1, int2, etc.
             if (end != start)
@@ -4578,10 +4576,10 @@ namespace Ogre{
             // C-style array
             while (start != String::npos)
             {
-                end = declarator.find_first_of("]", start);
+                end = declarator.find_first_of(']', start);
                 dimensions *= StringConverter::parseInt(
                     declarator.substr(start + 1, end - start - 1));
-                start = declarator.find_first_of("[", end);
+                start = declarator.find_first_of('[', end);
             }
         }
         
@@ -5362,8 +5360,16 @@ namespace Ogre{
     }
 
     //-------------------------------------------------------------------------
+    namespace {
+        
+    template <class T> T parseParam(const Ogre::String& param, BaseConstantType baseType); // unimplemented
+    template <> int parseParam<>(const Ogre::String& str, BaseConstantType baseType) { return StringConverter::parseInt(str); }
+    template <> uint parseParam<>(const Ogre::String& str, BaseConstantType baseType) { return baseType == BCT_BOOL ? (uint)StringConverter::parseBool(str) : StringConverter::parseUnsignedInt(str); }
+    template <> float parseParam<>(const Ogre::String& str, BaseConstantType baseType) { return (float)StringConverter::parseReal(str); }
+    template <> double parseParam<>(const Ogre::String& str, BaseConstantType baseType) { return (double)StringConverter::parseReal(str); }
+
     template <class T>
-    static void translateSharedParamNamed(ScriptCompiler *compiler, GpuSharedParameters* sharedParams, PropertyAbstractNode *prop, String pName, BaseConstantType baseType, GpuConstantType constType)
+    void translateSharedParamNamed(ScriptCompiler *compiler, GpuSharedParameters* sharedParams, PropertyAbstractNode *prop, String pName, BaseConstantType baseType, GpuConstantType constType)
     {
         std::vector<T> values;
 
@@ -5390,31 +5396,16 @@ namespace Ogre{
                 }
                 arraySz = StringConverter::parseInt(arrayStr);
             }
+            else if (baseType == BCT_FLOAT || baseType == BCT_INT || baseType == BCT_DOUBLE || baseType == BCT_UINT || baseType == BCT_BOOL)
+            {
+                values.push_back(parseParam<T>(atom->value, baseType));
+            }
             else
             {
-                switch(baseType)
-                {
-                case BCT_FLOAT:
-                    values.push_back((float)StringConverter::parseReal(atom->value));
-                    break;
-                case BCT_INT:
-                    values.push_back(StringConverter::parseInt(atom->value));
-                    break;
-                case BCT_DOUBLE:
-                    values.push_back((double)StringConverter::parseReal(atom->value));
-                    break;
-                case BCT_UINT:
-                    values.push_back(StringConverter::parseUnsignedInt(atom->value));
-                    break;
-                case BCT_BOOL:
-                    values.push_back((uint)StringConverter::parseBool(atom->value));
-                    break;
-                default:
-                    // This should never be reached.
-                    compiler->addError(ScriptCompiler::CE_NUMBEREXPECTED, prop->file, prop->line,
-                                            atom->value + " invalid - extra parameters to shared_param_named");
-                    continue;
-                }
+                // This should never be reached.
+                compiler->addError(ScriptCompiler::CE_NUMBEREXPECTED, prop->file, prop->line,
+                                   atom->value + " invalid - extra parameters to shared_param_named");
+                continue;
             }
 
         } // each extra param
@@ -5448,6 +5439,8 @@ namespace Ogre{
 
             sharedParams->setNamedConstant(pName, &values[0], elemsFound);
         }
+    }
+        
     }
 
     //-------------------------------------------------------------------------

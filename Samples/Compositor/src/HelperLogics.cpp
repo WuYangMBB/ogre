@@ -14,6 +14,8 @@ same license as the rest of the engine.
 
 #include "HelperLogics.h"
 
+#include <cmath>
+
 #include "Ogre.h"
 #include "OgreTimer.h"
 
@@ -122,7 +124,7 @@ void HeatVisionListener::notifyMaterialRender(Ogre::uint32 pass_id, Ogre::Materi
 
         // "depth_modulator" parameter
         float inc = ((float)timer->getMilliseconds())/1000.0f;
-        if ( (fabs(curr-end) <= 0.001) ) {
+        if ( (std::fabs(curr-end) <= 0.001) ) {
             // take a new value to reach
             end = Ogre::Math::RangeRandom(0.95, 1.0);
             start = curr;
@@ -158,12 +160,12 @@ void HDRListener::notifyViewportSize(int width, int height)
 void HDRListener::notifyCompositor(Ogre::CompositorInstance* instance)
 {
     // Get some RTT dimensions for later calculations
-    Ogre::CompositionTechnique::TextureDefinitionIterator defIter =
-        instance->getTechnique()->getTextureDefinitionIterator();
-    while (defIter.hasMoreElements())
+    const Ogre::CompositionTechnique::TextureDefinitions& defs =
+        instance->getTechnique()->getTextureDefinitions();
+    Ogre::CompositionTechnique::TextureDefinitions::const_iterator defIter;
+    for (defIter = defs.begin(); defIter != defs.end(); ++defIter)
     {
-        Ogre::CompositionTechnique::TextureDefinition* def =
-            defIter.getNext();
+        Ogre::CompositionTechnique::TextureDefinition* def = *defIter;
         if(def->name == "rt_bloom0")
         {
             mBloomSize = (int)def->width; // should be square

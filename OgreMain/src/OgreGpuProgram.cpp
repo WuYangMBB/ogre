@@ -28,11 +28,7 @@ THE SOFTWARE.
 #include "OgreStableHeaders.h"
 #include "OgreGpuProgram.h"
 #include "OgreGpuProgramManager.h"
-#include "OgreRoot.h"
-#include "OgreRenderSystem.h"
 #include "OgreRenderSystemCapabilities.h"
-#include "OgreStringConverter.h"
-#include "OgreLogManager.h"
 
 namespace Ogre
 {
@@ -238,7 +234,7 @@ namespace Ogre
             const String& name = i->first;
             const GpuConstantDefinition& def = i->second;
             // only consider non-array entries
-            if (name.find("[") == String::npos)
+            if (name.find('[') == String::npos)
             {
                 GpuLogicalIndexUseMap::value_type val(def.logicalIndex, 
                     GpuLogicalIndexUse(def.physicalIndex, def.arraySize * def.elementSize, def.variability));

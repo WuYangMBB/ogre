@@ -29,8 +29,6 @@ THE SOFTWARE.
 
 #include "OgreDynLib.h"
 
-#include "OgreException.h"
-#include "OgreLogManager.h"
 
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32 || OGRE_PLATFORM == OGRE_PLATFORM_WINRT
 #  define WIN32_LEAN_AND_MEAN
@@ -47,7 +45,7 @@ THE SOFTWARE.
 #if OGRE_PLATFORM == OGRE_PLATFORM_APPLE || OGRE_PLATFORM == OGRE_PLATFORM_APPLE_IOS
 #   include "macUtils.h"
 #endif
-#if OGRE_PLATFORM == OGRE_PLATFORM_APPLE || OGRE_PLATFORM == OGRE_PLATFORM_APPLE_IOS || OGRE_PLATFORM == OGRE_PLATFORM_NACL 
+#if OGRE_PLATFORM == OGRE_PLATFORM_APPLE || OGRE_PLATFORM == OGRE_PLATFORM_APPLE_IOS
 #   include <dlfcn.h>
 #endif
 
@@ -76,7 +74,7 @@ namespace Ogre {
 #if OGRE_PLATFORM == OGRE_PLATFORM_EMSCRIPTEN
         if (name.find(".js") == String::npos)
             name += ".js";
-#elif OGRE_PLATFORM == OGRE_PLATFORM_LINUX || OGRE_PLATFORM == OGRE_PLATFORM_NACL
+#elif OGRE_PLATFORM == OGRE_PLATFORM_LINUX
         // dlopen() does not add .so to the filename, like windows does for .dll
         if (name.find(".so") == String::npos)
         {

@@ -45,12 +45,12 @@ if(UNIX)
     add_definitions(-Wno-shadow) # inside tinyxml sources
 endif()
 
-ogre_add_executable(OgreXMLConverter ${HEADER_FILES} ${SOURCE_FILES})
+add_executable(OgreXMLConverter ${HEADER_FILES} ${SOURCE_FILES})
 target_link_libraries(OgreXMLConverter ${OGRE_LIBRARIES} ${TINYXML_LIBRARIES} ${OGRE_MeshLodGenerator_LIBRARIES})
 
 if (APPLE)
     set_target_properties(OgreXMLConverter PROPERTIES
-        LINK_FLAGS "-framework Carbon -framework Cocoa")
+        LINK_FLAGS "-framework Cocoa")
 endif ()
 if (OGRE_PROJECT_FOLDERS)
 	set_property(TARGET OgreXMLConverter PROPERTY FOLDER Tools)

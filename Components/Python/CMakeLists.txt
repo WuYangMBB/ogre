@@ -1,17 +1,23 @@
 project(OgrePython)
 
-find_package(SWIG)
-include_directories(${PYTHON_INCLUDE_PATH})
+find_package(SWIG 3.0.8)
 
 if(NOT PYTHONLIBS_FOUND OR NOT SWIG_FOUND)
     return()
 endif()
 
+include_directories(${PYTHON_INCLUDE_PATH})
+include_directories("${OGRE_BINARY_DIR}/include" "${OGRE_SOURCE_DIR}/OgreMain/include")
 include(${SWIG_USE_FILE})
 
 set(PYTHON_SITE_PACKAGES lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/dist-packages/)
 
 set(CMAKE_SWIG_FLAGS -w401,314 -builtin)
+
+if (APPLE AND NOT ANDROID)
+    # we are using libc++ on OSX
+    list(APPEND CMAKE_SWIG_FLAGS -D_LIBCPP_VERSION)
+endif()
 
 macro(ogre_python_module target)
     set_target_properties(${SWIG_MODULE_${target}_REAL_NAME} PROPERTIES 
@@ -51,12 +57,7 @@ if(OGRE_BUILD_COMPONENT_OVERLAY)
     ogre_python_module(OgreOverlay)
 endif()
 
-if(OGRE_BUILD_COMPONENT_BITES)
-    if(SDL2_FOUND)
-        include_directories(${SDL2_INCLUDE_DIR})
-        list(APPEND CMAKE_SWIG_FLAGS -DOGRE_BITES_HAVE_SDL=1)
-    endif()
-    
+if(OGRE_BUILD_COMPONENT_BITES)    
     ogre_add_component_include_dir(Bites)
     set_source_files_properties(../Bites/include/OgreBites.i PROPERTIES CPLUSPLUS ON)
     swig_add_module(OgreBites python ../Bites/include/OgreBites.i)

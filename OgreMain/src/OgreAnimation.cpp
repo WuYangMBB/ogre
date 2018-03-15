@@ -28,12 +28,7 @@ THE SOFTWARE.
 #include "OgreStableHeaders.h"
 #include "OgreAnimation.h"
 #include "OgreKeyFrame.h"
-#include "OgreException.h"
 #include "OgreEntity.h"
-#include "OgreSkeleton.h"
-#include "OgreBone.h"
-#include "OgreMesh.h"
-
 #include "OgreSubEntity.h"
 
 namespace Ogre {
@@ -731,7 +726,7 @@ namespace Ogre {
         if (mUseBaseKeyFrame)
         {
             Animation* baseAnim = this;
-            if (mBaseKeyFrameAnimationName != BLANKSTRING && mContainer)
+            if (!mBaseKeyFrameAnimationName.empty() && mContainer)
                 baseAnim = mContainer->getAnimation(mBaseKeyFrameAnimationName);
             
             if (baseAnim)

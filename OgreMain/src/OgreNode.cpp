@@ -26,91 +26,41 @@ THE SOFTWARE.
 -----------------------------------------------------------------------------
 */
 #include "OgreStableHeaders.h"
-#include "OgreNode.h"
-
-#include "OgreException.h"
-#include "OgreMath.h"
-
-// Dependencies on render-related types due to ability to render node
-#include "OgreMaterialManager.h"
-#include "OgreMeshManager.h"
-#include "OgreSubMesh.h"
-#include "OgreCamera.h"
-#include "OgreTechnique.h"
 #include "OgreManualObject.h"
-#include "OgreNameGenerator.h"
-#include "OgreMesh.h"
 
 namespace Ogre {
 
-    NameGenerator Node::msNameGenerator("Unnamed_");
     Node::QueuedUpdates Node::msQueuedUpdates;
     //-----------------------------------------------------------------------
-    Node::Node()
-        :mParent(0),
-        mNeedParentUpdate(false),
-        mNeedChildUpdate(false),
-        mParentNotified(false),
-        mQueuedForUpdate(false),
-        mOrientation(Quaternion::IDENTITY),
-        mPosition(Vector3::ZERO),
-        mScale(Vector3::UNIT_SCALE),
-        mInheritOrientation(true),
-        mInheritScale(true),
-        mDerivedOrientation(Quaternion::IDENTITY),
-        mDerivedPosition(Vector3::ZERO),
-        mDerivedScale(Vector3::UNIT_SCALE),
-        mInitialPosition(Vector3::ZERO),
-        mInitialOrientation(Quaternion::IDENTITY),
-        mInitialScale(Vector3::UNIT_SCALE),
-        mCachedTransformOutOfDate(true),
-        mListener(0), 
-        mDebug(0)
-    {
-#if OGRE_NODE_STORAGE_LEGACY
-        // Generate a name
-        mName = msNameGenerator.generate();
-#endif
-
-        needUpdate();
-
-    }
+    Node::Node() : Node(BLANKSTRING) {}
     //-----------------------------------------------------------------------
     Node::Node(const String& name)
-        :
-        mParent(0),
+        :mParent(0),
+        mName(name),
         mNeedParentUpdate(false),
         mNeedChildUpdate(false),
         mParentNotified(false),
         mQueuedForUpdate(false),
-        mName(name),
+        mInheritOrientation(true),
+        mInheritScale(true),
+        mCachedTransformOutOfDate(true),
         mOrientation(Quaternion::IDENTITY),
         mPosition(Vector3::ZERO),
         mScale(Vector3::UNIT_SCALE),
-        mInheritOrientation(true),
-        mInheritScale(true),
         mDerivedOrientation(Quaternion::IDENTITY),
         mDerivedPosition(Vector3::ZERO),
         mDerivedScale(Vector3::UNIT_SCALE),
         mInitialPosition(Vector3::ZERO),
         mInitialOrientation(Quaternion::IDENTITY),
         mInitialScale(Vector3::UNIT_SCALE),
-        mCachedTransformOutOfDate(true),
-        mListener(0), 
-        mDebug(0)
-
+        mListener(0)
     {
-
         needUpdate();
-
     }
 
     //-----------------------------------------------------------------------
     Node::~Node()
     {
-        OGRE_DELETE mDebug;
-        mDebug = 0;
-
         // Call listener (note, only called if there's something to do)
         if (mListener)
         {
@@ -159,12 +109,12 @@ namespace Ogre {
     }
 
     //-----------------------------------------------------------------------
-    const Matrix4& Node::_getFullTransform(void) const
+    const Affine3& Node::_getFullTransform(void) const
     {
         if (mCachedTransformOutOfDate)
         {
 #if OGRE_NODE_INHERIT_TRANSFORM
-            Ogre::Matrix4 tr;
+            Affine3 tr;
             tr.makeTransform(mPosition, mScale, mOrientation);
 
             if(mParent == NULL)
@@ -182,14 +132,14 @@ namespace Ogre {
             }
             else // shear is inherited together with orientation, controlled by mInheritOrientation
             {
-                const Ogre::Matrix4& parentTr = mParent->_getFullTransform();
-                Ogre::Vector3 parentScale(
-                    parentTr.transformDirectionAffine(Vector3::UNIT_X).length(),
-                    parentTr.transformDirectionAffine(Vector3::UNIT_Y).length(),
-                    parentTr.transformDirectionAffine(Vector3::UNIT_Z).length());
+                const Affine3& parentTr = mParent->_getFullTransform();
+                Vector3 parentScale(
+                    parentTr.transformDirection(Vector3::UNIT_X).length(),
+                    parentTr.transformDirection(Vector3::UNIT_Y).length(),
+                    parentTr.transformDirection(Vector3::UNIT_Z).length());
 
                 assert(mInheritOrientation ^ mInheritScale);
-                mCachedTransform = (mInheritOrientation ? Matrix4::getScale(1.0f / parentScale)  * parentTr : Matrix4::getScale(parentScale)) * tr;
+                mCachedTransform = (mInheritOrientation ? Affine3::getScale(1.0f / parentScale)  * parentTr : Affine3::getScale(parentScale)) * tr;
             }
 #else
             // Use derived values
@@ -223,11 +173,7 @@ namespace Ogre {
                 itend = mChildren.end();
                 for (it = mChildren.begin(); it != itend; ++it)
                 {
-#if OGRE_NODE_STORAGE_LEGACY
-                    Node* child = it->second;
-#else
                     Node* child = *it;
-#endif
                     child->_update(true, true);
                 }
             }
@@ -347,11 +293,7 @@ namespace Ogre {
                 "Node::addChild");
         }
 
-#if OGRE_NODE_STORAGE_LEGACY
-        mChildren.insert(ChildNodeMap::value_type(child->getName(), child));
-#else
         mChildren.push_back(child);
-#endif
         child->setParent(this);
 
     }
@@ -360,13 +302,7 @@ namespace Ogre {
     {
         if( index < mChildren.size() )
         {
-#if OGRE_NODE_STORAGE_LEGACY
-            ChildNodeMap::const_iterator i = mChildren.begin();
-            while (index--) ++i;
-            return i->second;
-#else
             return mChildren[index];
-#endif
         }
         else
             return NULL;
@@ -377,22 +313,14 @@ namespace Ogre {
         if (index < mChildren.size())
         {
             ChildNodeMap::iterator i = mChildren.begin();
-#if OGRE_NODE_STORAGE_LEGACY
-            while (index--) ++i;
-            Node* ret = i->second;
-#else
             i += index;
             Node* ret = *i;
-#endif
+
             // cancel any pending update
             cancelUpdate(ret);
 
-#if OGRE_NODE_STORAGE_LEGACY
-            mChildren.erase(i);
-#else
             std::swap(*i, mChildren.back());
             mChildren.pop_back();
-#endif
             ret->setParent(NULL);
             return ret;
         }
@@ -410,24 +338,14 @@ namespace Ogre {
     {
         if (child)
         {
-#if OGRE_NODE_STORAGE_LEGACY
-            ChildNodeMap::iterator i = mChildren.find(child->getName());
-            // ensure it's our child
-            if (i != mChildren.end() && i->second == child)
-#else
             ChildNodeMap::iterator i = std::find(mChildren.begin(), mChildren.end(), child);
             if(i != mChildren.end() && *i == child)
-#endif
             {
                 // cancel any pending update
                 cancelUpdate(child);
 
-#if OGRE_NODE_STORAGE_LEGACY
-                mChildren.erase(i);
-#else
                 std::swap(*i, mChildren.back());
                 mChildren.pop_back();
-#endif
                 child->setParent(NULL);
             }
         }
@@ -632,7 +550,7 @@ namespace Ogre {
             _updateFromParent();
         }
 #if OGRE_NODE_INHERIT_TRANSFORM
-        return _getFullTransform().inverseAffine().transformAffine(worldPos);
+        return _getFullTransform().inverse() * worldPos;
 #else
         return mDerivedOrientation.Inverse() * (worldPos - mDerivedPosition) / mDerivedScale;
 #endif
@@ -644,7 +562,7 @@ namespace Ogre {
         {
             _updateFromParent();
         }
-        return _getFullTransform().transformAffine(localPos);
+        return _getFullTransform() * localPos;
     }
     //-----------------------------------------------------------------------
     Vector3 Node::convertWorldToLocalDirection( const Vector3 &worldDir, bool useScale )
@@ -670,9 +588,7 @@ namespace Ogre {
         {
             _updateFromParent();
         }
-        return useScale ? 
-            _getFullTransform().transformDirectionAffine(localDir) :
-            mDerivedOrientation * localDir;
+        return useScale ? _getFullTransform().linear() * localDir : mDerivedOrientation * localDir;
     }
     //-----------------------------------------------------------------------
     Quaternion Node::convertWorldToLocalOrientation( const Quaternion &worldOrientation )
@@ -700,11 +616,7 @@ namespace Ogre {
         iend = mChildren.end();
         for (i = mChildren.begin(); i != iend; ++i)
         {
-#if OGRE_NODE_STORAGE_LEGACY
-            i->second->setParent(0);
-#else
             (*i)->setParent(0);
-#endif
         }
         mChildren.clear();
         mChildrenToUpdate.clear();
@@ -775,54 +687,36 @@ namespace Ogre {
     };
     Node* Node::getChild(const String& name) const
     {
-#if OGRE_NODE_STORAGE_LEGACY
-        ChildNodeMap::const_iterator i = mChildren.find(name);
-#else
         NodeNameExists pred = {name};
         ChildNodeMap::const_iterator i = std::find_if(mChildren.begin(), mChildren.end(), pred);
-#endif
 
         if (i == mChildren.end())
         {
             OGRE_EXCEPT(Exception::ERR_ITEM_NOT_FOUND, "Child node named " + name +
                 " does not exist.", "Node::getChild");
         }
-#if OGRE_NODE_STORAGE_LEGACY
-        return i->second;
-#else
+
         return *i;
-#endif
     }
     //-----------------------------------------------------------------------
     Node* Node::removeChild(const String& name)
     {
-#if OGRE_NODE_STORAGE_LEGACY
-        ChildNodeMap::iterator i = mChildren.find(name);
-#else
         OgreAssert(!name.empty(), "name must not be empty");
         NodeNameExists pred = {name};
         ChildNodeMap::iterator i = std::find_if(mChildren.begin(), mChildren.end(), pred);
-#endif
+
         if (i == mChildren.end())
         {
             OGRE_EXCEPT(Exception::ERR_ITEM_NOT_FOUND, "Child node named " + name +
                 " does not exist.", "Node::removeChild");
         }
 
-#if OGRE_NODE_STORAGE_LEGACY
-        Node* ret = i->second;
-#else
         Node* ret = *i;
-#endif
+
         // Cancel any pending update
         cancelUpdate(ret);
-
-#if OGRE_NODE_STORAGE_LEGACY
-        mChildren.erase(i);
-#else
         std::swap(*i, mChildren.back());
         mChildren.pop_back();
-#endif
         ret->setParent(NULL);
 
         return ret;
@@ -924,10 +818,10 @@ namespace Ogre {
     {
         if (!mDebug)
         {
-            mDebug = OGRE_NEW DebugRenderable(this);
+            mDebug.reset(new DebugRenderable(this));
         }
         mDebug->setScaling(scaling);
-        return mDebug;
+        return mDebug.get();
     }
     //---------------------------------------------------------------------
     //-----------------------------------------------------------------------

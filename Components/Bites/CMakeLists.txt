@@ -13,11 +13,6 @@
 
 project(OgreBites)
 
-if(SDL2_FOUND)
-  include_directories(${SDL2_INCLUDE_DIR})
-  set(DEPENDENCIES ${DEPENDENCIES} ${SDL2_LIBRARY})
-endif()
-
 if(ANDROID)
     include_directories(${ANDROID_NDK}/sources/android/native_app_glue)
 endif()
@@ -34,6 +29,7 @@ if (OGRE_STATIC)
   include_directories(${OGRE_SOURCE_DIR}/PlugIns/OctreeZone/include)
   include_directories(${OGRE_SOURCE_DIR}/PlugIns/ParticleFX/include)
   include_directories(${OGRE_SOURCE_DIR}/PlugIns/PCZSceneManager/include)
+  include_directories(${OGRE_SOURCE_DIR}/PlugIns/STBICodec/include)
   include_directories(${OGRE_SOURCE_DIR}/RenderSystems/Direct3D9/include ${DirectX9_INCLUDE_DIR})
   include_directories(${OGRE_SOURCE_DIR}/RenderSystems/Direct3D11/include)
   include_directories(${OGRE_SOURCE_DIR}/RenderSystems/GLES/include)
@@ -43,15 +39,41 @@ if (OGRE_STATIC)
   include_directories(${OGRE_SOURCE_DIR}/RenderSystems/GL3Plus/include)
 
   # Link to all enabled plugins
-  set(OGRE_LIBRARIES ${OGRE_LIBRARIES} ${SAMPLE_DEPENDENCIES})
-
-  # Need to include resource files so that icons are linked
-  if (WIN32)
-	  set(RESOURCE_FILES
-		  ${OGRE_SOURCE_DIR}/OgreMain/src/WIN32/resource.h
-		  ${OGRE_SOURCE_DIR}/OgreMain/src/WIN32/OgreWin32Resources.rc
-	  )
-	  source_group(Resources FILES ${RESOURCE_FILES})
+  if (OGRE_BUILD_PLUGIN_OCTREE)
+    set(DEPENDENCIES ${DEPENDENCIES} Plugin_OctreeSceneManager)
+  endif ()
+  if (OGRE_BUILD_PLUGIN_BSP)
+    set(DEPENDENCIES ${DEPENDENCIES} Plugin_BSPSceneManager)
+  endif ()
+  if (OGRE_BUILD_PLUGIN_CG)
+    set(DEPENDENCIES ${DEPENDENCIES} Plugin_CgProgramManager)
+  endif ()
+  if (OGRE_BUILD_PLUGIN_PFX)
+    set(DEPENDENCIES ${DEPENDENCIES} Plugin_ParticleFX)
+  endif ()
+  if (OGRE_BUILD_PLUGIN_PCZ)
+    set(DEPENDENCIES ${DEPENDENCIES} Plugin_PCZSceneManager)
+  endif ()
+  if (OGRE_BUILD_PLUGIN_STBI)
+    set(DEPENDENCIES ${DEPENDENCIES} Codec_STBI)
+  endif ()
+  if (OGRE_BUILD_PLUGIN_FREEIMAGE)
+    set(DEPENDENCIES ${DEPENDENCIES} Codec_FreeImage)
+  endif ()
+  if (OGRE_BUILD_RENDERSYSTEM_D3D9)
+    set(DEPENDENCIES ${DEPENDENCIES} RenderSystem_Direct3D9)
+  endif ()
+  if (OGRE_BUILD_RENDERSYSTEM_D3D11)
+    set(DEPENDENCIES ${DEPENDENCIES} RenderSystem_Direct3D11)
+  endif ()
+  if (OGRE_BUILD_RENDERSYSTEM_GL)
+    set(DEPENDENCIES ${DEPENDENCIES} RenderSystem_GL)
+  endif ()
+  if (OGRE_BUILD_RENDERSYSTEM_GL3PLUS)
+    set(DEPENDENCIES ${DEPENDENCIES} RenderSystem_GL3Plus)
+  endif ()
+  if (OGRE_BUILD_RENDERSYSTEM_GLES2)
+    set(DEPENDENCIES ${DEPENDENCIES} RenderSystem_GLES2)
   endif ()
 endif ()
 
@@ -63,17 +85,64 @@ endif ()
 # define header and source files for the library
 file(GLOB HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
 list(APPEND HEADER_FILES ${CMAKE_BINARY_DIR}/include/OgreBitesPrerequisites.h)
-file(GLOB SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+set(SOURCES 
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreAdvancedRenderControls.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreApplicationContext.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreBitesConfigDialog.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreCameraMan.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreSGTechniqueResolverListener.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreStaticPluginLoader.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreTrays.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreWindowEventUtilities.cpp")
+
+if(ANDROID OR EMSCRIPTEN OR APPLE_IOS OR WINDOWS_STORE OR WINDOWS_PHONE)
+  # no config dialog available
+elseif(WIN32)
+  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src")
+  list(APPEND SOURCES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreWIN32ConfigDialog.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/resource.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/misc/OgreWin32Resources.rc")
+  # Need to include resource files so that icons are linked
+  set(RESOURCE_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/resource.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/misc/OgreWin32Resources.rc"
+  )
+  source_group(Resources FILES ${RESOURCE_FILES})
+elseif(APPLE)
+  list(APPEND SOURCES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreOSXConfigDialog.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/misc/ogrelogo.png")
+  set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/src/OgreOSXConfigDialog.mm"
+    PROPERTIES COMPILE_FLAGS "-Wno-deprecated-declarations"
+  )
+  set(RESOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/misc/ogrelogo.png")
+  source_group(Resources FILES ${RESOURCE_FILES})
+  set(DEPENDENCIES ${DEPENDENCIES} "-framework Cocoa")
+elseif(UNIX)
+  list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/OgreGLXConfigDialog.cpp")
+  list(APPEND DEPENDENCIES ${X11_Xt_LIB} ${XAW_LIBRARY})
+  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/misc/GLX_backdrop.png" DESTINATION "share/OGRE/")
+endif()
 
 # include headers
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${OGRE_SOURCE_DIR}/OgreMain/include)
 ogre_add_component_include_dir(Overlay)
 
 # setup target
-ogre_add_library_to_folder(Components OgreBites ${OGRE_COMP_LIB_TYPE} ${HEADER_FILES} ${SOURCE_FILES})
+add_library(OgreBites ${OGRE_COMP_LIB_TYPE} ${HEADER_FILES} ${SOURCES})
 set_target_properties(OgreBites PROPERTIES VERSION ${OGRE_SOVERSION} SOVERSION ${OGRE_SOVERSION})
 target_link_libraries(OgreBites OgreMain OgreOverlay ${DEPENDENCIES})
+
+if(OGRE_STATIC AND APPLE AND OGRE_BUILD_PLUGIN_CG)
+  # workaround so the Cg framework is found in the above condition
+  target_include_directories(OgreBites PUBLIC ${Cg_INCLUDE_DIRS})
+endif()
+
+if(SDL2_FOUND)
+  target_include_directories(OgreBites PUBLIC ${SDL2_INCLUDE_DIR})
+  target_link_libraries(OgreBites ${SDL2_LIBRARY})
+endif()
 
 generate_export_header(OgreBites 
     EXPORT_MACRO_NAME _OgreBitesExport

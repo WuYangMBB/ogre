@@ -29,12 +29,7 @@ THE SOFTWARE.
 
 #include "OgreStableHeaders.h"
 #include "OgreShadowCameraSetupFocused.h"
-#include "OgreSceneManager.h"
-#include "OgreCamera.h"
 #include "OgreLight.h"
-#include "OgrePlane.h"
-#include "OgreLogManager.h"
-
 
 namespace Ogre
 {
@@ -60,14 +55,8 @@ namespace Ogre
         mTempFrustum->setProjectionType(PT_PERSPECTIVE);
     }
     //-----------------------------------------------------------------------
-    FocusedShadowCameraSetup::~FocusedShadowCameraSetup(void)
-    {
-        OGRE_DELETE mTempFrustum;
-        OGRE_DELETE mLightFrustumCamera;
-    }
-    //-----------------------------------------------------------------------
     void FocusedShadowCameraSetup::calculateShadowMappingMatrix(const SceneManager& sm,
-        const Camera& cam, const Light& light, Matrix4 *out_view, Matrix4 *out_proj, 
+        const Camera& cam, const Light& light, Affine3 *out_view, Matrix4 *out_proj,
         Camera *out_cam) const
     {
         // get the shadow frustum's far distance
@@ -102,7 +91,7 @@ namespace Ogre
             // generate projection matrix if requested
             if (out_proj != NULL)
             {
-                *out_proj = Matrix4::getScale(1, 1, -1);
+                *out_proj = Affine3::getScale(1, 1, -1);
                 //*out_proj = Matrix4::IDENTITY;
             }
 
@@ -238,7 +227,7 @@ namespace Ogre
             // set up light camera to clip with the resulting frustum planes
             if (!mLightFrustumCameraCalculated)
             {
-                calculateShadowMappingMatrix(sm, cam, light, NULL, NULL, mLightFrustumCamera);
+                calculateShadowMappingMatrix(sm, cam, light, NULL, NULL, mLightFrustumCamera.get());
                 mLightFrustumCameraCalculated = true;
             }
             mBodyB.clip(*mLightFrustumCamera);
@@ -291,7 +280,7 @@ namespace Ogre
             // set up light camera to clip the resulting frustum
             if (!mLightFrustumCameraCalculated)
             {
-                calculateShadowMappingMatrix(sm, cam, light, NULL, NULL, mLightFrustumCamera);
+                calculateShadowMappingMatrix(sm, cam, light, NULL, NULL, mLightFrustumCamera.get());
                 mLightFrustumCameraCalculated = true;
             }
             bodyLVS.clip(*mLightFrustumCamera);
@@ -332,7 +321,7 @@ namespace Ogre
             Vector3::NEGATIVE_UNIT_Z : projectionDir.normalisedCopy();
     }
     //-----------------------------------------------------------------------
-    Vector3 FocusedShadowCameraSetup::getNearCameraPoint_ws(const Matrix4& viewMatrix, 
+    Vector3 FocusedShadowCameraSetup::getNearCameraPoint_ws(const Affine3& viewMatrix,
         const PointListBody& bodyLVS) const
     {
         if (bodyLVS.getPointCount() == 0)
@@ -390,7 +379,7 @@ namespace Ogre
         return mOut;
     }
     //-----------------------------------------------------------------------
-    Matrix4 FocusedShadowCameraSetup::buildViewMatrix(const Vector3& pos, const Vector3& dir, 
+    Affine3 FocusedShadowCameraSetup::buildViewMatrix(const Vector3& pos, const Vector3& dir,
         const Vector3& up) const
     {
         Vector3 xN = dir.crossProduct(up);
@@ -398,11 +387,9 @@ namespace Ogre
         Vector3 upN = xN.crossProduct(dir);
         upN.normalise();
 
-        Matrix4 m(xN.x,     xN.y,       xN.z,       -xN.dotProduct(pos),
+        Affine3 m(xN.x,     xN.y,       xN.z,       -xN.dotProduct(pos),
             upN.x,      upN.y,      upN.z,      -upN.dotProduct(pos),
-            -dir.x,     -dir.y, -dir.z, dir.dotProduct(pos),
-            0.0,            0.0,        0.0,        1.0
-            );
+            -dir.x,     -dir.y, -dir.z, dir.dotProduct(pos));
 
         return m;
     }
@@ -421,7 +408,7 @@ namespace Ogre
         texCam->setFarClipDistance(light->_deriveShadowFarClipDistance(cam));
 
         // calculate standard shadow mapping matrix
-        Matrix4 LView, LProj;
+        Affine3 LView; Matrix4 LProj;
         calculateShadowMappingMatrix(*sm, *cam, *light, &LView, &LProj, NULL);
 
         // build scene bounding box

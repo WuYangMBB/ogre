@@ -39,6 +39,8 @@ THE SOFTWARE.
 #include "OgreViewport.h"
 #include "OgreRoot.h"
 #include "OgreVolumeChunk.h"
+
+#include <cmath>
 #include "OgreVolumeMeshBuilder.h"
 #include "OgreVolumeOctreeNode.h"
 #include "OgreMaterialManager.h"
@@ -403,7 +405,7 @@ namespace Volume {
             stream << "materialOfLevel" << i;
 
             String materialOfLevel = config.getSetting(stream.str());
-            if (materialOfLevel != BLANKSTRING)
+            if (!materialOfLevel.empty())
             {
                 mat = MaterialManager::getSingleton().getByName(config.getSetting(stream.str()));
                 setMaterialOfLevel(i, mat);
@@ -507,7 +509,7 @@ namespace Volume {
             return true;
         }
     
-        Real k = ((Real)mCamera->getViewport()->getActualHeight() / ((Real)2.0 * tan(mCamera->getFOVy().valueRadians() / (Real)2.0)));
+        Real k = ((Real)mCamera->getViewport()->getActualHeight() / ((Real)2.0 * std::tan(mCamera->getFOVy().valueRadians() / (Real)2.0)));
 
         
         // Get the distance to the center.
@@ -573,11 +575,6 @@ namespace Volume {
     
     //-----------------------------------------------------------------------
 
-    void Chunk::setMaterial(const String& matName)
-    {
-        setMaterial(MaterialManager::getSingleton().getByName(matName));
-    }
-
     void Chunk::setMaterial(const MaterialPtr& mat)
     {
         SimpleRenderable::setMaterial(mat);
@@ -599,11 +596,6 @@ namespace Volume {
     }
     
     //-----------------------------------------------------------------------
-    void Chunk::setMaterialOfLevel(size_t level, const String& matName)
-    {
-        setMaterialOfLevel(level, MaterialManager::getSingleton().getByName(matName));
-    }
-
     void Chunk::setMaterialOfLevel(size_t level, const MaterialPtr& mat)
     {
         if (level == 0)

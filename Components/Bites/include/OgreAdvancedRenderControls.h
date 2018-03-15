@@ -30,6 +30,8 @@ THE SOFTWARE.
 #define COMPONENTS_BITES_INCLUDE_OGREADVANCEDRENDERCONTROLS_H_
 
 #include "OgreInput.h"
+#include "OgreRoot.h"
+#include "OgreCamera.h"
 
 #ifdef OGRE_BUILD_COMPONENT_RTSHADERSYSTEM
 #include <OgreRTShaderSystem.h>
@@ -43,6 +45,7 @@ class ParamsPanel;
 /**
    - F:        Toggle frame rate stats on/off
    - G:        Toggle advanced frame stats on/off
+   - P         Toggle profiler window on/ off (if compiled with OGRE_PROFILING)
    - R:        Render mode
                - Wireframe
                - Points
@@ -52,9 +55,11 @@ class ParamsPanel;
                - Trilinear
                - Anisotropic(8)
                - None
-   - F2:       Set the main viewport material scheme to default material manager scheme.
-   - F3:       Toggle default shader generator lighting model from per vertex to per pixel.
-   - F4:       Switch vertex shader outputs compaction policy.
+   - F2:       RTSS: Set the main viewport material scheme to default material manager scheme.
+   - F3:       RTSS: Toggle default shader generator lighting model from per vertex to per pixel.
+   - F4:       RTSS: Switch vertex shader outputs compaction policy.
+   - F5:       Reload all textures
+   - F6:       Take a screenshot
  */
 class _OgreBitesExport AdvancedRenderControls : public InputListener {
 public:

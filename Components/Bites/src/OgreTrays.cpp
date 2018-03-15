@@ -8,11 +8,7 @@
 #include "OgreTrays.h"
 
 #if OGRE_UNICODE_SUPPORT
-#   if  OGRE_STRING_USE_CUSTOM_MEMORY_ALLOCATOR
-#       define DISPLAY_STRING_TO_STRING(DS) (DS.asUTF8_c_str())
-#   else
-#       define DISPLAY_STRING_TO_STRING(DS) (DS.asUTF8())
-#   endif
+    #define DISPLAY_STRING_TO_STRING(DS) (DS.asUTF8())
 #else
     #define DISPLAY_STRING_TO_STRING(DS) (DS)
 #endif
@@ -1247,13 +1243,13 @@ void TrayManager::hideAll()
 
 void TrayManager::showBackdrop(const Ogre::String &materialName)
 {
-    if (materialName != Ogre::BLANKSTRING) mBackdrop->setMaterialName(materialName);
+    if (!materialName.empty()) mBackdrop->setMaterialName(materialName);
     mBackdropLayer->show();
 }
 
 void TrayManager::showCursor(const Ogre::String &materialName)
 {
-    if (materialName != Ogre::BLANKSTRING) getCursorImage()->setMaterialName(materialName);
+    if (!materialName.empty()) getCursorImage()->setMaterialName(materialName);
 
     if (!mCursorLayer->isVisible())
     {
@@ -1285,9 +1281,7 @@ void TrayManager::refreshCursor()
     // the position should be based on the orientation, for now simply return
     return;
 #endif
-    int x, y;
-    if (SDL_GetMouseState(&x, &y))
-        mCursor->setPosition(x, y);
+    mCursor->setPosition(mCursorPos.x, mCursorPos.y);
 }
 
 void TrayManager::showTrays()
@@ -1803,12 +1797,6 @@ bool TrayManager::isDialogVisible()
     return mDialog != 0;
 }
 
-Widget *TrayManager::getWidget(TrayLocation trayLoc, unsigned int place)
-{
-    if (place < mWidgets[trayLoc].size()) return mWidgets[trayLoc][place];
-    return 0;
-}
-
 Widget *TrayManager::getWidget(TrayLocation trayLoc, const Ogre::String &name)
 {
     for (unsigned int i = 0; i < mWidgets[trayLoc].size(); i++)
@@ -1840,16 +1828,6 @@ unsigned int TrayManager::getNumWidgets()
     }
 
     return total;
-}
-
-size_t TrayManager::getNumWidgets(TrayLocation trayLoc)
-{
-    return mWidgets[trayLoc].size();
-}
-
-WidgetIterator TrayManager::getWidgetIterator(TrayLocation trayLoc)
-{
-    return WidgetIterator(mWidgets[trayLoc].begin(), mWidgets[trayLoc].end());
 }
 
 int TrayManager::locateWidgetInTray(Widget *widget)
@@ -1997,7 +1975,7 @@ void TrayManager::frameRendered(const Ogre::FrameEvent &evt)
 
 void TrayManager::windowUpdate()
 {
-#if OGRE_PLATFORM != OGRE_PLATFORM_APPLE_IOS && OGRE_PLATFORM != OGRE_PLATFORM_NACL
+#if OGRE_PLATFORM != OGRE_PLATFORM_APPLE_IOS
     mWindow->update();
 #endif
 }
@@ -2150,26 +2128,28 @@ bool TrayManager::mouseReleased(const MouseButtonEvent &evt)
 
 bool TrayManager::mouseMoved(const MouseMotionEvent &evt)
 {
+    // always keep track of the mouse pos for refreshCursor()
+    mCursorPos = Ogre::Vector2(evt.x, evt.y);
+
     if (!mCursorLayer->isVisible()) return false;   // don't process if cursor layer is invisible
 
-    Ogre::Vector2 cursorPos(evt.x, evt.y);
     float wheelDelta = 0;//evt.state.Z.rel;
-    mCursor->setPosition(cursorPos.x, cursorPos.y);
+    mCursor->setPosition(mCursorPos.x, mCursorPos.y);
 
     if (mExpandedMenu)   // only check top priority widget until it passes on
     {
-        mExpandedMenu->_cursorMoved(cursorPos, wheelDelta);
+        mExpandedMenu->_cursorMoved(mCursorPos, wheelDelta);
         return true;
     }
 
     if (mDialog)   // only check top priority widget until it passes on
     {
-        mDialog->_cursorMoved(cursorPos, wheelDelta);
-        if(mOk) mOk->_cursorMoved(cursorPos, wheelDelta);
+        mDialog->_cursorMoved(mCursorPos, wheelDelta);
+        if(mOk) mOk->_cursorMoved(mCursorPos, wheelDelta);
         else
         {
-            mYes->_cursorMoved(cursorPos, wheelDelta);
-            mNo->_cursorMoved(cursorPos, wheelDelta);
+            mYes->_cursorMoved(mCursorPos, wheelDelta);
+            mNo->_cursorMoved(mCursorPos, wheelDelta);
         }
         return true;
     }
@@ -2184,7 +2164,7 @@ bool TrayManager::mouseMoved(const MouseMotionEvent &evt)
             if(j >= (int)mWidgets[i].size()) continue;
             Widget* w = mWidgets[i][j];
             if (!w->getOverlayElement()->isVisible()) continue;
-            w->_cursorMoved(cursorPos, wheelDelta);    // send event to widget
+            w->_cursorMoved(mCursorPos, wheelDelta);    // send event to widget
         }
     }
 

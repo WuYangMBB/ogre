@@ -45,6 +45,7 @@ THE SOFTWARE.
 #include "OgreMaterialManager.h"
 #include "OgreLodStrategyManager.h"
 #include "OgreSkeleton.h"
+#include "OgreKeyFrame.h"
 
 
 //#define I_HAVE_LOT_OF_FREE_TIME
@@ -61,10 +62,6 @@ THE SOFTWARE.
 #ifdef OGRE_BUILD_COMPONENT_MESHLODGENERATOR
 #include "OgreMeshLodGenerator.h"
 #include "OgreLodConfig.h"
-#endif
-
-#if OGRE_PLATFORM == OGRE_PLATFORM_APPLE
-#include "macUtils.h"
 #endif
 
 // Register the test suite
@@ -110,7 +107,7 @@ void MeshSerializerTests::SetUp()
         }
     }
 
-    mMesh = MeshManager::getSingleton().load("knot.mesh", "General");
+    mMesh = MeshManager::getSingleton().load("facial.mesh", "General");
 
     getResourceFullPath(mMesh, mMeshFullPath);
     if (!copyFile(mMeshFullPath + ".bak", mMeshFullPath)) {
@@ -287,12 +284,21 @@ TEST_F(MeshSerializerTests,Mesh_XML)
     assertMeshClone(mOrigMesh.get(), mMesh.get());
 #endif
 }
+
+namespace Ogre
+{
+static bool operator==(const VertexPoseKeyFrame::PoseRef& a, const VertexPoseKeyFrame::PoseRef& b)
+{
+
+    return a.poseIndex == b.poseIndex && a.influence == b.influence;
+}
+}
+
 //--------------------------------------------------------------------------
 void MeshSerializerTests::assertMeshClone(Mesh* a, Mesh* b, MeshVersion version /*= MESH_VERSION_LATEST*/)
 {
     // TODO: Compare skeleton
     // TODO: Compare animations
-    // TODO: Compare pose animations
 
     // EXPECT_TRUE(a->getGroup() == b->getGroup());
     // EXPECT_TRUE(a->getName() == b->getName());
@@ -392,6 +398,45 @@ void MeshSerializerTests::assertMeshClone(Mesh* a, Mesh* b, MeshVersion version 
             assertVertexDataClone(aop.vertexData, bop.vertexData);
             EXPECT_TRUE(aop.operationType == bop.operationType);
             EXPECT_TRUE(aop.useIndexes == bop.useIndexes);
+        }
+    }
+
+    // animations
+    ASSERT_EQ(b->getNumAnimations(), a->getNumAnimations());
+
+    // pose animations
+    const PoseList& aPoseList = a->getPoseList();
+    const PoseList& bPoseList = a->getPoseList();
+    ASSERT_EQ(bPoseList.size(), aPoseList.size());
+    for (size_t i = 0; i < aPoseList.size(); i++)
+    {
+        EXPECT_EQ(bPoseList[i]->getName(), aPoseList[i]->getName());
+        EXPECT_EQ(bPoseList[i]->getTarget(), aPoseList[i]->getTarget());
+        EXPECT_EQ(bPoseList[i]->getNormals(), aPoseList[i]->getNormals());
+        EXPECT_EQ(bPoseList[i]->getVertexOffsets(), aPoseList[i]->getVertexOffsets());
+    }
+
+    for (int i = 0; i < a->getNumAnimations(); i++)
+    {
+        EXPECT_EQ(b->getAnimation(i)->getLength(), a->getAnimation(i)->getLength());
+        ASSERT_EQ(b->getAnimation(i)->getNumVertexTracks(),
+                  a->getAnimation(i)->getNumVertexTracks());
+
+        const Animation::VertexTrackList& aList = a->getAnimation(i)->_getVertexTrackList();
+        const Animation::VertexTrackList& bList = b->getAnimation(i)->_getVertexTrackList();
+
+        Animation::VertexTrackList::const_iterator it = aList.begin();
+        for (; it != aList.end(); ++it)
+        {
+            EXPECT_EQ(bList.at(it->first)->getAnimationType(), it->second->getAnimationType());
+            ASSERT_EQ(bList.at(it->first)->getNumKeyFrames(), it->second->getNumKeyFrames());
+
+            for (int j = 0; j < it->second->getNumKeyFrames(); j++)
+            {
+                VertexPoseKeyFrame* aKeyFrame = it->second->getVertexPoseKeyFrame(j);
+                VertexPoseKeyFrame* bKeyFrame = bList.at(it->first)->getVertexPoseKeyFrame(j);
+                ASSERT_EQ(bKeyFrame->getPoseReferences(), aKeyFrame->getPoseReferences());
+            }
         }
     }
 }

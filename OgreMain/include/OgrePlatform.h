@@ -39,7 +39,6 @@ namespace Ogre {
 #define OGRE_PLATFORM_APPLE 3
 #define OGRE_PLATFORM_APPLE_IOS 4
 #define OGRE_PLATFORM_ANDROID 5
-#define OGRE_PLATFORM_NACL 6
 #define OGRE_PLATFORM_WINRT 7
 #define OGRE_PLATFORM_EMSCRIPTEN 8
     
@@ -101,6 +100,13 @@ namespace Ogre {
         #define OGRE_FORCE_INLINE __inline
 #endif
 
+/* fallthrough attribute */
+#if OGRE_COMPILER_MIN_VERSION(OGRE_COMPILER_GNUC, 700)
+#define OGRE_FALLTHROUGH __attribute__((fallthrough))
+#else
+#define OGRE_FALLTHROUGH
+#endif
+
 /* define OGRE_NORETURN macro */
 #if OGRE_COMPILER == OGRE_COMPILER_MSVC
 #	define OGRE_NORETURN __declspec(noreturn)
@@ -146,30 +152,32 @@ namespace Ogre {
 #   endif
 #elif defined(__ANDROID__)
 #   define OGRE_PLATFORM OGRE_PLATFORM_ANDROID
-#elif defined( __native_client__ ) 
-#   define OGRE_PLATFORM OGRE_PLATFORM_NACL
-#   ifndef OGRE_STATIC_LIB
-#       error OGRE must be built as static for NaCl (OGRE_STATIC=true in CMake)
-#   endif
-#   ifdef OGRE_BUILD_RENDERSYSTEM_D3D9
-#       error D3D9 is not supported on NaCl (OGRE_BUILD_RENDERSYSTEM_D3D9 false in CMake)
-#   endif
-#   ifdef OGRE_BUILD_RENDERSYSTEM_GL
-#       error OpenGL is not supported on NaCl (OGRE_BUILD_RENDERSYSTEM_GL=false in CMake)
-#   endif
-#   ifndef OGRE_BUILD_RENDERSYSTEM_GLES2
-#       error GLES2 render system is required for NaCl (OGRE_BUILD_RENDERSYSTEM_GLES2=false in CMake)
-#   endif
 #else
 #   define OGRE_PLATFORM OGRE_PLATFORM_LINUX
 #endif
 
     /* Find the arch type */
-#if defined(__x86_64__) || defined(_M_X64) || defined(__powerpc64__) || defined(__alpha__) || defined(__ia64__) || defined(__s390__) || defined(__s390x__) || defined(__arm64__) || defined(__aarch64__) || defined(__mips64) || defined(__mips64_)
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64) || defined(_M_ARM64) || defined(__powerpc64__) || defined(__alpha__) || defined(__ia64__) || defined(__s390__) || defined(__s390x__) || defined(__arm64__) || defined(__aarch64__) || defined(__mips64) || defined(__mips64_)
 #   define OGRE_ARCH_TYPE OGRE_ARCHITECTURE_64
 #else
 #   define OGRE_ARCH_TYPE OGRE_ARCHITECTURE_32
 #endif
+
+/* Find how to declare aligned variable. */
+#if OGRE_COMPILER == OGRE_COMPILER_MSVC
+#   define OGRE_ALIGNED_DECL(type, var, alignment)  __declspec(align(alignment)) type var
+#elif (OGRE_COMPILER == OGRE_COMPILER_GNUC) || (OGRE_COMPILER == OGRE_COMPILER_CLANG)
+#   define OGRE_ALIGNED_DECL(type, var, alignment)  type var __attribute__((__aligned__(alignment)))
+#else
+#   define OGRE_ALIGNED_DECL(type, var, alignment)  type var
+#endif
+
+/** Find perfect alignment (should supports SIMD alignment if SIMD available) */
+#define OGRE_SIMD_ALIGNMENT 16
+
+/* Declare variable aligned to SIMD alignment. */
+#define OGRE_SIMD_ALIGNED_DECL(type, var)   OGRE_ALIGNED_DECL(type, var, OGRE_SIMD_ALIGNMENT)
+
 
 // For generating compiler warnings - should work on any compiler
 // As a side note, if you start your message with 'Warning: ', the MSVC
@@ -224,7 +232,7 @@ namespace Ogre {
 //----------------------------------------------------------------------------
 // Linux/Apple/iOS/Android/NaCl/Emscripten Settings
 #if OGRE_PLATFORM == OGRE_PLATFORM_LINUX || OGRE_PLATFORM == OGRE_PLATFORM_APPLE || OGRE_PLATFORM == OGRE_PLATFORM_APPLE_IOS || \
-    OGRE_PLATFORM == OGRE_PLATFORM_ANDROID || OGRE_PLATFORM == OGRE_PLATFORM_NACL || OGRE_PLATFORM == OGRE_PLATFORM_EMSCRIPTEN
+    OGRE_PLATFORM == OGRE_PLATFORM_ANDROID || OGRE_PLATFORM == OGRE_PLATFORM_EMSCRIPTEN
 
 // Always enable unicode support for the moment
 // Perhaps disable in old versions of gcc if necessary
@@ -265,7 +273,7 @@ namespace Ogre {
 //----------------------------------------------------------------------------
 // Library suffixes
 // "_d" for debug builds, nothing otherwise
-#if OGRE_DEBUG_MODE
+#if OGRE_DEBUG_MODE && OGRE_PLATFORM == OGRE_PLATFORM_WIN32
 #   define OGRE_BUILD_SUFFIX "_d"
 #else
 #   define OGRE_BUILD_SUFFIX ""

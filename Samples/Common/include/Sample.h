@@ -38,11 +38,6 @@
 #   include "OgreRTShaderSystem.h"
 #endif //INCLUDE_RTSHADER_SYSTEM
 
-#if OGRE_PLATFORM == OGRE_PLATFORM_NACL && !defined(INCLUDE_RTSHADER_SYSTEM)
-#   define INCLUDE_RTSHADER_SYSTEM
-#include "OgreShaderGenerator.h"
-#endif
-
 #include "OgreInput.h"
 
 namespace OgreBites
@@ -244,7 +239,7 @@ namespace OgreBites
         -----------------------------------------------------------------------------*/
         virtual void createSceneManager()
         {
-            mSceneMgr = Ogre::Root::getSingleton().createSceneManager(Ogre::ST_GENERIC);
+            mSceneMgr = Ogre::Root::getSingleton().createSceneManager();
 #ifdef INCLUDE_RTSHADER_SYSTEM
             mShaderGenerator->addSceneManager(mSceneMgr);
 #endif

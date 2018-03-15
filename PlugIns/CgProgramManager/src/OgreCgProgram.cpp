@@ -51,7 +51,7 @@ namespace Ogre {
 		iend = mProfiles.end();
 		GpuProgramManager& gpuMgr = GpuProgramManager::getSingleton();
 		bool useDelegate = false;
-		bool foundProfile = false;
+
 		for (i = mProfiles.begin(); i != iend; ++i)
 		{
 			bool syntaxSupported = gpuMgr.isSyntaxSupported(*i);
@@ -86,7 +86,7 @@ namespace Ogre {
 					"Unable to find CG profile enum for program " + mName + ": ", mCgContext);
 				
 				// do we need a delegate?
-				if (useDelegate && mDelegate)
+				if (useDelegate && !mDelegate)
 				{
 					mDelegate =
 						HighLevelGpuProgramManager::getSingleton().createProgram(
@@ -105,14 +105,8 @@ namespace Ogre {
 					mDelegate.reset();
 				}
 				
-				foundProfile = true;
 				break;
 			}
-		}
-
-		if (!foundProfile)
-		{
-			LogManager::getSingleton().logMessage(String("Error: ") + mName +  "'s syntax is not supported", LML_CRITICAL);
 		}
 	}
 	//-----------------------------------------------------------------------
@@ -735,11 +729,15 @@ namespace Ogre {
 		// Cg logs its renamings in the comments at the beginning of the
 		// processed source file. We can get them from there.
 		// We'll also get rid of those comments to trim down source code size.
+#if OGRE_DEBUG_MODE
 		LogManager::getSingleton().stream() << "Cg high level output for " << getName() << ":\n" << hlSource;
+#endif
 		hlSource = HighLevelOutputFixer(hlSource, mParametersMap, mSamplerRegisterMap, 
 			mSelectedCgProfile == CG_PROFILE_GLSLV || mSelectedCgProfile == CG_PROFILE_GLSLF || 
 			mSelectedCgProfile == CG_PROFILE_GLSLG).output;
+#if OGRE_DEBUG_MODE
 		LogManager::getSingleton().stream() << "Cleaned high level output for " << getName() << ":\n" << hlSource;
+#endif
 	}
 
 
@@ -879,6 +877,11 @@ namespace Ogre {
 	//-----------------------------------------------------------------------
 	void CgProgram::unloadHighLevelImpl(void)
 	{
+        if (mDelegate)
+        {
+            mDelegate->getCreator()->remove(mDelegate);
+            mDelegate.reset();
+        }
 	}
 	//-----------------------------------------------------------------------
 	void CgProgram::buildConstantDefinitions() const
@@ -1275,7 +1278,7 @@ namespace Ogre {
 		{
 			size_t includePos = i;
 			size_t afterIncludePos = includePos + 8;
-			size_t newLineBefore = inSource.rfind("\n", includePos);
+			size_t newLineBefore = inSource.rfind('\n', includePos);
 
 			// check we're not in a comment
 			size_t lineCommentIt = inSource.rfind("//", includePos);
@@ -1303,14 +1306,14 @@ namespace Ogre {
 			}
 
 			// find following newline (or EOF)
-			size_t newLineAfter = inSource.find("\n", afterIncludePos);
+			size_t newLineAfter = inSource.find('\n', afterIncludePos);
 			// find include file string container
 			String endDelimeter = "\"";
-			size_t startIt = inSource.find("\"", afterIncludePos);
+			size_t startIt = inSource.find('\"', afterIncludePos);
 			if (startIt == String::npos || startIt > newLineAfter)
 			{
 				// try <>
-				startIt = inSource.find("<", afterIncludePos);
+				startIt = inSource.find('<', afterIncludePos);
 				if (startIt == String::npos || startIt > newLineAfter)
 				{
 					OGRE_EXCEPT(Exception::ERR_INTERNAL_ERROR,
